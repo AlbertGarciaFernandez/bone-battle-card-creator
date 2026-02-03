@@ -1,0 +1,5 @@
+{
+  "name": "Bone Battle Card Creator",
+  "description": "A dynamic card creation tool for the Bone Battle collectible card game, featuring AI-powered stats and image generation.",
+  "requestFramePermissions": []
+}
