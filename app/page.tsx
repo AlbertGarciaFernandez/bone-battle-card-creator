@@ -7,7 +7,7 @@ import GameGuideModal from '../components/GameGuideModal';
 import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES } from '../types';
 import { generateCardImage } from '../services/geminiService';
 import {
-    Skull, Download, FileText, Send, Instagram, Heart, Globe,
+    PawPrint, Download, FileText, Send, Instagram, Heart, Globe,
     Code, Camera, Gift, X, CheckCircle, Mail, MessageCircle, BookOpen,
     Loader2, AlertCircle
 } from 'lucide-react';
@@ -79,6 +79,9 @@ const INITIAL_CARD: CardData = {
     namePosition: 'left-top',
     statsPosition: 'right-middle',
     dogTricksPermission: false,
+    dogTricks: "",
+    imageZoom: 1,
+    imagePosition: { x: 0, y: 0 },
     gear: Object.fromEntries(GEAR_CATEGORIES.map(c => [c, Math.floor(Math.random() * 3)])),
     kinks: Object.fromEntries(KINKS_CATEGORIES.map(c => [c, Math.floor(Math.random() * 3)]))
 };
@@ -252,6 +255,30 @@ const App: React.FC = () => {
         setShowGuideModal(true);
     };
 
+    const handleDeveloperSupport = async () => {
+        const stripePriceId = "price_1SxT80QNT7knsC42AKh1AlAn";
+        try {
+            const response = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    priceId: stripePriceId,
+                    metadata: {
+                        pup_name: card.name,
+                        social: card.socialLink
+                    }
+                }),
+            });
+            const { url, error } = await response.json();
+            if (error) throw new Error(error);
+            if (url) window.location.href = url;
+        } catch (err) {
+            console.error('Support redirect error:', err);
+            // Updated to the user-provided official Stripe Payment Link
+            window.open(`https://buy.stripe.com/00w28t5VP1D69IjdQcf3a01?client_reference_id=${stripePriceId}`, '_blank');
+        }
+    };
+
     const totalBones = React.useMemo(
         () => calculateTotalBones(card.gear, card.kinks),
         [card.gear, card.kinks]
@@ -286,12 +313,12 @@ const App: React.FC = () => {
             <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="bg-bone-500 p-2 rounded-lg">
-                            <Skull className="text-slate-900 w-6 h-6" />
+                        <div className="bg-bone-500 p-2 rounded-lg shadow-lg shadow-bone-500/20">
+                            <PawPrint className="text-slate-900 w-6 h-6" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold font-display text-bone-100 tracking-wide">BONE BATTLE</h1>
-                            <p className="text-xs text-slate-500 uppercase tracking-widest">Card Creator</p>
+                            <h1 className="text-xl font-bold font-display text-bone-100 tracking-wide">BONE BATTLE <span className="text-bone-400">PREVIEW</span></h1>
+                            <p className="text-xs text-slate-500 uppercase tracking-widest font-mono">Card Creator</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -449,23 +476,35 @@ const App: React.FC = () => {
                                 <span className="font-medium">Print, Share, Collect</span>
                                 <FileText size={14} className="text-slate-600 group-hover:text-green-400 transition-colors" />
                             </button>
+                            <a href="https://linktr.ee/bonebattle" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group mt-1">
+                                <span className="font-bold text-xs uppercase tracking-tighter">Bone Battle Linktree</span>
+                                <Globe size={14} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
+                            </a>
                         </div>
                     </div>
 
                     {/* Developer */}
                     <div className="flex flex-col items-center md:items-end text-center md:text-right">
-                        <div className="flex items-center gap-2 mb-2 text-blue-400">
+                        <div className="flex items-center gap-2 mb-3 text-blue-400">
                             <span className="text-sm font-bold uppercase tracking-wider">Developed By</span>
                             <Globe size={16} />
                         </div>
-                        <div className="flex flex-col gap-2 items-center md:items-end">
+                        <div className="flex flex-col gap-3 items-center md:items-end">
                             <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-bone-200 transition-colors group">
                                 <span className="font-medium">pup.hunter071</span>
                                 <Instagram size={16} className="text-slate-600 group-hover:text-bone-400 transition-colors" />
                             </a>
-                            <a href="https://www.codehunterlab.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group">
-                                <Code size={14} className="group-hover:text-blue-400 transition-colors" />
-                                <span className="text-xs font-mono font-semibold tracking-wider">CodeHunter Lab</span>
+                            <a
+                                href="https://www.codehunterlab.com/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex flex-col items-center md:items-end group"
+                            >
+                                <span className="text-sm font-display font-black text-slate-400 group-hover:text-blue-400 transition-colors tracking-widest uppercase">CODEHUNTER LAB</span>
+                                <div className="flex items-center gap-1 text-slate-600 group-hover:text-blue-500/60 transition-colors">
+                                    <span className="text-[10px] font-mono">www.codehunterlab.com</span>
+                                    <Globe size={10} />
+                                </div>
                             </a>
                         </div>
                     </div>
@@ -549,20 +588,38 @@ const App: React.FC = () => {
                                     <p>
                                         BUT as many pups are asking about how to support all of this… here we go:
                                     </p>
-                                    <ul className="space-y-2 mt-2">
-                                        <li className="flex items-center gap-2">
-                                            <span className="text-bone-500 font-bold">A)</span>
-                                            <span>Amazon Giftcards (amazon.de): Send to <span className="text-white select-all">pup.joker.jx@gmail.com</span></span>
-                                            <a href="https://amzn.eu/d/70zAVcn" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline ml-1">Link</a>
+                                    <ul className="space-y-4 mt-2">
+                                        <li className="flex flex-col gap-1.5 p-3 rounded-lg bg-orange-950/20 border border-orange-500/20">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-orange-500 font-bold">A) Joker (The Creator)</span>
+                                                <a href="https://amzn.eu/d/70zAVcn" target="_blank" rel="noopener noreferrer" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-blue-400 no-underline">Amazon.de Giftcard</a>
+                                            </div>
+                                            <p className="text-xs text-slate-400">Send to: <span className="text-white font-mono select-all">pup.joker.jx@gmail.com</span></p>
                                         </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="text-bone-500 font-bold">B)</span>
-                                            <span>Throne Wishlist</span>
-                                            <a href="https://throne.com/joker_jx" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline ml-1">throne.com/joker_jx</a>
+                                        <li className="flex flex-col gap-1.5 p-3 rounded-lg bg-slate-800/40 border border-slate-700">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-200 font-bold">B) Joker's Wishlist</span>
+                                                <a href="https://throne.com/joker_jx" target="_blank" rel="noopener noreferrer" className="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-blue-400 no-underline">Throne List</a>
+                                            </div>
+                                        </li>
+                                        <li className="flex flex-col gap-1.5 p-3 rounded-lg bg-blue-950/20 border border-blue-500/20">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-blue-400 font-bold">C) The Developer (CodeHunter Lab)</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDeveloperSupport}
+                                                    className="text-[10px] bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-white font-bold transition-all transform hover:scale-105"
+                                                >
+                                                    Support Album App
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-slate-300">
+                                                Support our developer so we can release the <strong className="text-blue-200">Collectible Card Album App</strong> as soon as possible!
+                                            </p>
                                         </li>
                                     </ul>
-                                    <p className="text-xs italic text-slate-500 mt-2">
-                                        Feel free to send any amount you want or just enjoy the cards and game without sending anything at all. I’m happy when you are ^^
+                                    <p className="text-[10px] italic text-slate-500 mt-4 border-t border-slate-800 pt-3">
+                                        Feel free to support any way you want, or just enjoy the cards and game for free. I’m happy when you are! ^^
                                     </p>
                                 </div>
                             </div>

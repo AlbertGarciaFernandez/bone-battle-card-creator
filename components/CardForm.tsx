@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES, CardPosition } from '../types';
-import { Image as ImageIcon, Bone, AlertCircle, Upload, Info } from 'lucide-react';
+import { Image as ImageIcon, Bone, AlertCircle, Upload, Info, Dog } from 'lucide-react';
 
 interface CardFormProps {
   card: CardData;
@@ -19,35 +19,255 @@ const POSITION_OPTIONS: { label: string; value: CardPosition }[] = [
 ];
 
 const COUNTRIES = [
-  { code: 'US', name: 'United States' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'DE', name: 'Germany' },
-  { code: 'FR', name: 'France' },
-  { code: 'ES', name: 'Spain' },
-  { code: 'IT', name: 'Italy' },
-  { code: 'NL', name: 'Netherlands' },
-  { code: 'BR', name: 'Brazil' },
-  { code: 'AU', name: 'Australia' },
-  { code: 'MX', name: 'Mexico' },
-  { code: 'JP', name: 'Japan' },
-  { code: 'KR', name: 'South Korea' },
-  { code: 'CN', name: 'China' },
-  { code: 'RU', name: 'Russia' },
-  { code: 'ZA', name: 'South Africa' },
-  { code: 'AR', name: 'Argentina' },
-  { code: 'CL', name: 'Chile' },
-  { code: 'CO', name: 'Colombia' },
-  { code: 'PE', name: 'Peru' },
-  { code: 'BE', name: 'Belgium' },
-  { code: 'CH', name: 'Switzerland' },
-  { code: 'SE', name: 'Sweden' },
-  { code: 'NO', name: 'Norway' },
-  { code: 'DK', name: 'Denmark' },
-  { code: 'PL', name: 'Poland' },
-  { code: 'PT', name: 'Portugal' },
-  { code: 'IE', name: 'Ireland' },
-  { code: 'NZ', name: 'New Zealand' },
+  { code: "AF", name: "Afghanistan" },
+  { code: "AX", name: "Aland Islands" },
+  { code: "AL", name: "Albania" },
+  { code: "DZ", name: "Algeria" },
+  { code: "AS", name: "American Samoa" },
+  { code: "AD", name: "Andorra" },
+  { code: "AO", name: "Angola" },
+  { code: "AI", name: "Anguilla" },
+  { code: "AQ", name: "Antarctica" },
+  { code: "AG", name: "Antigua and Barbuda" },
+  { code: "AR", name: "Argentina" },
+  { code: "AM", name: "Armenia" },
+  { code: "AW", name: "Aruba" },
+  { code: "AU", name: "Australia" },
+  { code: "AT", name: "Austria" },
+  { code: "AZ", name: "Azerbaijan" },
+  { code: "BS", name: "Bahamas" },
+  { code: "BH", name: "Bahrain" },
+  { code: "BD", name: "Bangladesh" },
+  { code: "BB", name: "Barbados" },
+  { code: "BY", name: "Belarus" },
+  { code: "BE", name: "Belgium" },
+  { code: "BZ", name: "Belize" },
+  { code: "BJ", name: "Benin" },
+  { code: "BM", name: "Bermuda" },
+  { code: "BT", name: "Bhutan" },
+  { code: "BO", name: "Bolivia" },
+  { code: "BQ", name: "Bonaire, Sint Eustatius and Saba" },
+  { code: "BA", name: "Bosnia and Herzegovina" },
+  { code: "BW", name: "Botswana" },
+  { code: "BV", name: "Bouvet Island" },
+  { code: "BR", name: "Brazil" },
+  { code: "IO", name: "British Indian Ocean Territory" },
+  { code: "BN", name: "Brunei Darussalam" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "BF", name: "Burkina Faso" },
+  { code: "BI", name: "Burundi" },
+  { code: "KH", name: "Cambodia" },
+  { code: "CM", name: "Cameroon" },
+  { code: "CA", name: "Canada" },
+  { code: "CV", name: "Cape Verde" },
+  { code: "KY", name: "Cayman Islands" },
+  { code: "CF", name: "Central African Republic" },
+  { code: "TD", name: "Chad" },
+  { code: "CL", name: "Chile" },
+  { code: "CN", name: "China" },
+  { code: "CX", name: "Christmas Island" },
+  { code: "CC", name: "Cocos (Keeling) Islands" },
+  { code: "CO", name: "Colombia" },
+  { code: "KM", name: "Comoros" },
+  { code: "CG", name: "Congo" },
+  { code: "CD", name: "Congo, Democratic Republic of the" },
+  { code: "CK", name: "Cook Islands" },
+  { code: "CR", name: "Costa Rica" },
+  { code: "CI", name: "Cote d'Ivoire" },
+  { code: "HR", name: "Croatia" },
+  { code: "CU", name: "Cuba" },
+  { code: "CW", name: "Curacao" },
+  { code: "CY", name: "Cyprus" },
+  { code: "CZ", name: "Czech Republic" },
+  { code: "DK", name: "Denmark" },
+  { code: "DJ", name: "Djibouti" },
+  { code: "DM", name: "Dominica" },
+  { code: "DO", name: "Dominican Republic" },
+  { code: "EC", name: "Ecuador" },
+  { code: "EG", name: "Egypt" },
+  { code: "SV", name: "El Salvador" },
+  { code: "GQ", name: "Equatorial Guinea" },
+  { code: "ER", name: "Eritrea" },
+  { code: "EE", name: "Estonia" },
+  { code: "ET", name: "Ethiopia" },
+  { code: "FK", name: "Falkland Islands (Malvinas)" },
+  { code: "FO", name: "Faroe Islands" },
+  { code: "FJ", name: "Fiji" },
+  { code: "FI", name: "Finland" },
+  { code: "FR", name: "France" },
+  { code: "GF", name: "French Guiana" },
+  { code: "PF", name: "French Polynesia" },
+  { code: "TF", name: "French Southern Territories" },
+  { code: "GA", name: "Gabon" },
+  { code: "GM", name: "Gambia" },
+  { code: "GE", name: "Georgia" },
+  { code: "DE", name: "Germany" },
+  { code: "GH", name: "Ghana" },
+  { code: "GI", name: "Gibraltar" },
+  { code: "GR", name: "Greece" },
+  { code: "GL", name: "Greenland" },
+  { code: "GD", name: "Grenada" },
+  { code: "GP", name: "Guadeloupe" },
+  { code: "GU", name: "Guam" },
+  { code: "GT", name: "Guatemala" },
+  { code: "GG", name: "Guernsey" },
+  { code: "GN", name: "Guinea" },
+  { code: "GW", name: "Guinea-Bissau" },
+  { code: "GY", name: "Guyana" },
+  { code: "HT", name: "Haiti" },
+  { code: "HM", name: "Heard Island and McDonald Islands" },
+  { code: "VA", name: "Holy See (Vatican City State)" },
+  { code: "HN", name: "Honduras" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "HU", name: "Hungary" },
+  { code: "IS", name: "Iceland" },
+  { code: "IN", name: "India" },
+  { code: "ID", name: "Indonesia" },
+  { code: "IR", name: "Iran, Islamic Republic of" },
+  { code: "IQ", name: "Iraq" },
+  { code: "IE", name: "Ireland" },
+  { code: "IM", name: "Isle of Man" },
+  { code: "IL", name: "Israel" },
+  { code: "IT", name: "Italy" },
+  { code: "JM", name: "Jamaica" },
+  { code: "JP", name: "Japan" },
+  { code: "JE", name: "Jersey" },
+  { code: "JO", name: "Jordan" },
+  { code: "KZ", name: "Kazakhstan" },
+  { code: "KE", name: "Kenya" },
+  { code: "KI", name: "Kiribati" },
+  { code: "KP", name: "Korea, Democratic People's Republic of" },
+  { code: "KR", name: "Korea, Republic of" },
+  { code: "KW", name: "Kuwait" },
+  { code: "KG", name: "Kyrgyzstan" },
+  { code: "LA", name: "Lao People's Democratic Republic" },
+  { code: "LV", name: "Latvia" },
+  { code: "LB", name: "Lebanon" },
+  { code: "LS", name: "Lesotho" },
+  { code: "LR", name: "Liberia" },
+  { code: "LY", name: "Libya" },
+  { code: "LI", name: "Liechtenstein" },
+  { code: "LT", name: "Lithuania" },
+  { code: "LU", name: "Luxembourg" },
+  { code: "MO", name: "Macao" },
+  { code: "MK", name: "Macedonia, the Former Yugoslav Republic of" },
+  { code: "MG", name: "Madagascar" },
+  { code: "MW", name: "Malawi" },
+  { code: "MY", name: "Malaysia" },
+  { code: "MV", name: "Maldives" },
+  { code: "ML", name: "Mali" },
+  { code: "MT", name: "Malta" },
+  { code: "MH", name: "Marshall Islands" },
+  { code: "MQ", name: "Martinique" },
+  { code: "MR", name: "Mauritania" },
+  { code: "MU", name: "Mauritius" },
+  { code: "YT", name: "Mayotte" },
+  { code: "MX", name: "Mexico" },
+  { code: "FM", name: "Micronesia, Federated States of" },
+  { code: "MD", name: "Moldova, Republic of" },
+  { code: "MC", name: "Monaco" },
+  { code: "MN", name: "Mongolia" },
+  { code: "ME", name: "Montenegro" },
+  { code: "MS", name: "Montserrat" },
+  { code: "MA", name: "Morocco" },
+  { code: "MZ", name: "Mozambique" },
+  { code: "MM", name: "Myanmar" },
+  { code: "NA", name: "Namibia" },
+  { code: "NR", name: "Nauru" },
+  { code: "NP", name: "Nepal" },
+  { code: "NL", name: "Netherlands" },
+  { code: "NC", name: "New Caledonia" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "NI", name: "Nicaragua" },
+  { code: "NE", name: "Niger" },
+  { code: "NG", name: "Nigeria" },
+  { code: "NU", name: "Niue" },
+  { code: "NF", name: "Norfolk Island" },
+  { code: "MP", name: "Northern Mariana Islands" },
+  { code: "NO", name: "Norway" },
+  { code: "OM", name: "Oman" },
+  { code: "PK", name: "Pakistan" },
+  { code: "PW", name: "Palau" },
+  { code: "PS", name: "Palestine, State of" },
+  { code: "PA", name: "Panama" },
+  { code: "PG", name: "Papua New Guinea" },
+  { code: "PY", name: "Paraguay" },
+  { code: "PE", name: "Peru" },
+  { code: "PH", name: "Philippines" },
+  { code: "PN", name: "Pitcairn" },
+  { code: "PL", name: "Poland" },
+  { code: "PT", name: "Portugal" },
+  { code: "PR", name: "Puerto Rico" },
+  { code: "QA", name: "Qatar" },
+  { code: "RE", name: "Reunion" },
+  { code: "RO", name: "Romania" },
+  { code: "RU", name: "Russia" },
+  { code: "RW", name: "Rwanda" },
+  { code: "BL", name: "Saint Barthelemy" },
+  { code: "SH", name: "Saint Helena" },
+  { code: "KN", name: "Saint Kitts and Nevis" },
+  { code: "LC", name: "Saint Lucia" },
+  { code: "MF", name: "Saint Martin (French part)" },
+  { code: "PM", name: "Saint Pierre and Miquelon" },
+  { code: "VC", name: "Saint Vincent and the Grenadines" },
+  { code: "WS", name: "Samoa" },
+  { code: "SM", name: "San Marino" },
+  { code: "ST", name: "Sao Tome and Principe" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "SN", name: "Senegal" },
+  { code: "RS", name: "Serbia" },
+  { code: "SC", name: "Seychelles" },
+  { code: "SL", name: "Sierra Leone" },
+  { code: "SG", name: "Singapore" },
+  { code: "SX", name: "Sint Maarten (Dutch part)" },
+  { code: "SK", name: "Slovakia" },
+  { code: "SI", name: "Slovenia" },
+  { code: "SB", name: "Solomon Islands" },
+  { code: "SO", name: "Somalia" },
+  { code: "ZA", name: "South Africa" },
+  { code: "GS", name: "South Georgia and the South Sandwich Islands" },
+  { code: "SS", name: "South Sudan" },
+  { code: "ES", name: "Spain" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "SD", name: "Sudan" },
+  { code: "SR", name: "Suriname" },
+  { code: "SJ", name: "Svalbard and Jan Mayen" },
+  { code: "SZ", name: "Swaziland" },
+  { code: "SE", name: "Sweden" },
+  { code: "CH", name: "Switzerland" },
+  { code: "SY", name: "Syrian Arab Republic" },
+  { code: "TW", name: "Taiwan" },
+  { code: "TJ", name: "Tajikistan" },
+  { code: "TZ", name: "Tanzania, United Republic of" },
+  { code: "TH", name: "Thailand" },
+  { code: "TL", name: "Timor-Leste" },
+  { code: "TG", name: "Togo" },
+  { code: "TK", name: "Tokelau" },
+  { code: "TO", name: "Tonga" },
+  { code: "TT", name: "Trinidad and Tobago" },
+  { code: "TN", name: "Tunisia" },
+  { code: "TR", name: "Turkey" },
+  { code: "TM", name: "Turkmenistan" },
+  { code: "TC", name: "Turks and Caicos Islands" },
+  { code: "TV", name: "Tuvalu" },
+  { code: "UG", name: "Uganda" },
+  { code: "UA", name: "Ukraine" },
+  { code: "AE", name: "United Arab Emirates" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "US", name: "United States" },
+  { code: "UM", name: "United States Minor Outlying Islands" },
+  { code: "UY", name: "Uruguay" },
+  { code: "UZ", name: "Uzbekistan" },
+  { code: "VU", name: "Vanuatu" },
+  { code: "VE", name: "Venezuela" },
+  { code: "VN", name: "Vietnam" },
+  { code: "VG", name: "Virgin Islands, British" },
+  { code: "VI", name: "Virgin Islands, U.S." },
+  { code: "WF", name: "Wallis and Futuna" },
+  { code: "EH", name: "Western Sahara" },
+  { code: "YE", name: "Yemen" },
+  { code: "ZM", name: "Zambia" },
+  { code: "ZW", name: "Zimbabwe" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
 const GEAR_DESCRIPTIONS: Record<string, string> = {
@@ -92,6 +312,20 @@ const CardForm: React.FC<CardFormProps> = ({
 
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
 
+  // Social Platform State
+  const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'other'>('instagram');
+
+  // Custom Country State
+  const [isCustomCountry, setIsCustomCountry] = useState(false);
+  const [customCountryName, setCustomCountryName] = useState('');
+
+  // Update effect to detect if country provided is in list or custom
+  useEffect(() => {
+    if (card.country && !COUNTRIES.find(c => c.code === card.country) && card.country !== 'OTHER') {
+      // Just keep standard logic if already custom
+    }
+  }, []);
+
   const handleChange = (field: keyof CardData, value: any) => {
     setCard({ ...card, [field]: value });
   };
@@ -126,6 +360,10 @@ const CardForm: React.FC<CardFormProps> = ({
 
   const isOverLimit = totalBones > 70;
   const isUnder50 = totalBones < 50;
+
+  // Dog Tricks Calculation
+  const missingBones = Math.max(0, 50 - totalBones);
+  const requiredTricks = Math.ceil(missingBones / 4);
 
   // Height Conversion Logic
   const updateHeightFromCm = (val: string) => {
@@ -162,14 +400,17 @@ const CardForm: React.FC<CardFormProps> = ({
     }
   };
 
-  // Shoe Conversion Logic (Approximate: EU = US + 33 for simplicity in game context)
+  // Shoe Conversion Logic (Revised: EU = 32.7 + 1.27 * US)
   const updateShoeFromEu = (val: string) => {
     setEuShoe(val);
     const numEu = parseFloat(val);
-    if (!isNaN(numEu)) {
-      const calcUs = numEu - 33;
-      setUsShoe(calcUs.toString());
-      handleChange('shoeSize', `${val}EU / ${calcUs}US`);
+    if (!isNaN(numEu) && numEu > 30) {
+      // US = (EU - 32.7) / 1.27
+      const calcUs = (numEu - 32.7) / 1.27;
+      // Round to nearest 0.5
+      const roundedUs = Math.round(calcUs * 2) / 2;
+      setUsShoe(roundedUs.toString());
+      handleChange('shoeSize', `${val}EU / ${roundedUs}US`);
     } else {
       handleChange('shoeSize', val);
     }
@@ -178,12 +419,37 @@ const CardForm: React.FC<CardFormProps> = ({
   const updateShoeFromUs = (val: string) => {
     setUsShoe(val);
     const numUs = parseFloat(val);
-    if (!isNaN(numUs)) {
-      const calcEu = numUs + 33;
-      setEuShoe(calcEu.toString());
-      handleChange('shoeSize', `${calcEu}EU / ${val}US`);
+    if (!isNaN(numUs) && numUs > 0) {
+      // EU = 32.7 + 1.27 * US
+      const calcEu = 32.7 + (1.27 * numUs);
+      const roundedEu = Math.round(calcEu * 10) / 10; // 1 decimal place
+      setEuShoe(roundedEu.toString());
+      handleChange('shoeSize', `${roundedEu}EU / ${val}US`);
     } else {
       handleChange('shoeSize', val);
+    }
+  };
+
+  // Strict Pawsday Validation (YYYY.MM)
+  const handlePawsdayChange = (val: string) => {
+    // Check if user is typing valid chars (digits or .)
+    if (!/^[\d.]*$/.test(val)) return;
+
+    // Limits
+    if (val.length > 7) return;
+
+    // Auto-dot insertion or strict typing? 
+    // User requested "prevention to enter something different than stated format YYYY.MM"
+    // Let's enforce it strictly on blur or just mask it.
+
+    handleChange('birthdate', val);
+  };
+
+  const handlePawsdayBlur = () => {
+    // Validate strict format
+    if (card.birthdate && !/^\d{4}\.\d{2}$/.test(card.birthdate)) {
+      // Maybe clear it or warn?
+      // For now, let's just leave it but the pattern attribute handles browser warnings
     }
   };
 
@@ -214,6 +480,9 @@ const CardForm: React.FC<CardFormProps> = ({
                   }`}
                 placeholder="Enter pup name"
               />
+              <p className="text-[10px] text-slate-500 mt-1 italic">
+                Don't have a name? Ask your alpha, followers or friends to help find one!
+              </p>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
@@ -227,6 +496,9 @@ const CardForm: React.FC<CardFormProps> = ({
               >
                 {Object.values(HoodColor).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              <p className="text-[10px] text-slate-500 mt-1 italic">
+                The color you identify as. Choose "Multi" if you don't fit one group (like red vs blue).
+              </p>
             </div>
           </div>
 
@@ -350,9 +622,10 @@ const CardForm: React.FC<CardFormProps> = ({
                 placeholder="2021.05"
                 pattern="\d{4}\.\d{2}"
                 value={card.birthdate}
-                onChange={(e) => handleChange('birthdate', e.target.value)}
+                onChange={(e) => handlePawsdayChange(e.target.value)}
+                onBlur={handlePawsdayBlur}
                 required
-                className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.birthdate ? 'border-red-500/50' : 'border-slate-700'
+                className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.birthdate || !/^\d{4}\.\d{2}$/.test(card.birthdate) ? 'border-red-500/50' : 'border-slate-700'
                   }`}
               />
             </div>
@@ -360,34 +633,90 @@ const CardForm: React.FC<CardFormProps> = ({
               <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
                 Country <span className="text-red-400">*</span>
               </label>
-              <select
-                value={card.country}
-                onChange={(e) => handleChange('country', e.target.value)}
-                required
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none"
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                {!isCustomCountry ? (
+                  <select
+                    value={card.country}
+                    onChange={(e) => {
+                      if (e.target.value === 'OTHER') {
+                        setIsCustomCountry(true);
+                        handleChange('country', '');
+                      } else {
+                        handleChange('country', e.target.value);
+                      }
+                    }}
+                    required
+                    className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none"
+                  >
+                    <option value="">Select...</option>
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name} ({c.code})
+                      </option>
+                    ))}
+                    <option value="OTHER">+ Other / Custom</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-1 w-full">
+                    <input
+                      type="text"
+                      placeholder="Country Code (e.g. FR, DE)"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none"
+                      value={card.country}
+                      onChange={(e) => handleChange('country', e.target.value.toUpperCase().slice(0, 3))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomCountry(false)}
+                      className="px-2 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
           <div>
             <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
               Social Link <span className="text-red-400">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="@username or linktr.ee/..."
-              value={card.socialLink}
-              onChange={(e) => handleChange('socialLink', e.target.value)}
-              required
-              className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.socialLink ? 'border-red-500/50' : 'border-slate-700'
-                }`}
-            />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="socialPlatform"
+                    checked={socialPlatform === 'instagram'}
+                    onChange={() => setSocialPlatform('instagram')}
+                    className="w-3 h-3 accent-purple-500"
+                  />
+                  <span className="text-xs text-slate-300">Instagram</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="socialPlatform"
+                    checked={socialPlatform === 'other'}
+                    onChange={() => setSocialPlatform('other')}
+                    className="w-3 h-3 accent-purple-500"
+                  />
+                  <span className="text-xs text-slate-300">Other</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                placeholder={socialPlatform === 'instagram' ? "@username" : "linktr.ee/..."}
+                value={card.socialLink}
+                onChange={(e) => handleChange('socialLink', e.target.value)}
+                required
+                className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.socialLink ? 'border-red-500/50' : 'border-slate-700'
+                  }`}
+              />
+            </div>
           </div>
+
           <div>
             <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
               Image <span className="text-red-400">*</span>
@@ -417,6 +746,81 @@ const CardForm: React.FC<CardFormProps> = ({
               >
                 {isGeneratingImage ? <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" /> : <ImageIcon size={14} />}
               </button>
+            </div>
+          </div>
+
+          {/* Image Adjustments */}
+          <div className={`mt-2 bg-slate-900/40 p-3 rounded-lg border ${!card.imageUrl ? 'opacity-30 pointer-events-none' : 'border-slate-700'} space-y-4`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ImageIcon size={12} className="text-slate-500" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Crop & Position</label>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  handleChange('imageZoom', 1);
+                  handleChange('imagePosition', { x: 0, y: 0 });
+                }}
+                className="text-[9px] text-slate-500 hover:text-white underline decoration-slate-700"
+              >
+                Reset View
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {/* Zoom Slider */}
+              <div>
+                <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                  <span>ZOOM</span>
+                  <span className="text-bone-400">{Math.round((card.imageZoom || 1) * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="4"
+                  step="0.01"
+                  value={card.imageZoom || 1}
+                  onChange={(e) => handleChange('imageZoom', parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* X Position */}
+                <div>
+                  <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                    <span>POS X</span>
+                    <span className="text-bone-400">{(card.imagePosition?.x || 0)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    value={card.imagePosition?.x || 0}
+                    onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), x: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
+                  />
+                </div>
+
+                {/* Y Position */}
+                <div>
+                  <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                    <span>POS Y</span>
+                    <span className="text-bone-400">{(card.imagePosition?.y || 0)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    value={card.imagePosition?.y || 0}
+                    onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), y: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -577,8 +981,8 @@ const CardForm: React.FC<CardFormProps> = ({
           {/* Dedicated Info Panel */}
           <div className="mt-6 min-h-[90px] relative">
             <div className={`p-4 rounded-lg border transition-all duration-300 ${activeInfo
-                ? 'bg-slate-950/80 border-bone-500/30'
-                : 'bg-slate-900/10 border-slate-800/50 opacity-40'
+              ? 'bg-slate-950/80 border-bone-500/30'
+              : 'bg-slate-900/10 border-slate-800/50 opacity-40'
               }`}>
               {activeInfo ? (
                 <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
@@ -611,25 +1015,56 @@ const CardForm: React.FC<CardFormProps> = ({
             </div>
           </div>
 
-          {/* Conditional Checkbox for < 50 Bones */}
+          {/* DOG TRICKS SECTION */}
           {isUnder50 && (
-            <div className="mt-4 p-3 bg-amber-900/20 border border-amber-600/50 rounded-lg flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={card.dogTricksPermission}
-                onChange={(e) => handleChange('dogTricksPermission', e.target.checked)}
-                className="mt-1 accent-amber-500 cursor-pointer w-4 h-4"
-              />
-              <div>
-                <p className="text-xs text-amber-200 font-medium">
-                  Total bones under 50 (min 40).
-                </p>
-                <p className="text-[10px] text-amber-400/80 leading-tight">
-                  Consider adding "Dog Tricks" boosters to balance the card. I give permission for that.
-                </p>
+            <div className={`mt-4 p-4 rounded-lg border transition-colors ${card.dogTricksPermission ? 'bg-amber-950/20 border-amber-600/50' : 'bg-slate-900/50 border-slate-700'}`}>
+              <div className="flex items-start gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  checked={card.dogTricksPermission}
+                  onChange={(e) => handleChange('dogTricksPermission', e.target.checked)}
+                  className="mt-1 accent-amber-500 cursor-pointer w-4 h-4"
+                />
+                <div>
+                  <h5 className="text-xs font-bold text-amber-200">Bones Under 50 Balance</h5>
+                  <p className="text-[10px] text-amber-400/80 leading-tight mt-0.5">
+                    Check this box if you agree to perform Dog Tricks to balance your card strength.
+                  </p>
+                </div>
               </div>
+
+              {card.dogTricksPermission && (
+                <div className="mt-3 pl-7 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 mb-2 text-amber-300">
+                    <Dog size={14} className="fill-current" />
+                    <span className="text-[11px] font-bold">
+                      Required: Select {requiredTricks} Dog Trick{requiredTricks !== 1 && 's'} (1 per 4 missing bones)
+                    </span>
+                  </div>
+                  <textarea
+                    className="w-full bg-slate-950 border border-amber-900/50 rounded-md p-2 text-xs text-amber-100 placeholder-amber-900/30 focus:border-amber-500/50 focus:outline-none min-h-[60px]"
+                    placeholder={`List your ${requiredTricks} dog tricks here...`}
+                    value={card.dogTricks || ''}
+                    onChange={(e) => handleChange('dogTricks', e.target.value)}
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <a
+                      href="https://ugc.production.linktr.ee/cd8abbd3-c2bf-4cd2-ac46-5a4ebe5d47db_Bone-Battle---Dog-Tricks-Cheat-Sheet.pdf"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[9px] text-amber-500 hover:text-amber-400 underline decoration-dotted"
+                    >
+                      View Dog Tricks Cheat Sheet
+                    </a>
+                    <span className="text-[9px] text-amber-600/60">
+                      Short by {missingBones} bones
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
         </div>
 
         <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.consent ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/30'

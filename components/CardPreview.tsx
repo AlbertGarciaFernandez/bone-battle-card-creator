@@ -38,10 +38,12 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
 
   // Helper to render bones with side-specific rotation
   const renderBones = (count: number = 0, side: 'left' | 'right' = 'left') => {
-    const rotation = side === 'left' ? '-rotate-90' : 'rotate-135';
+    const rotation = side === 'left' ? '-rotate-90' : 'rotate-90';
+    const boneValues = side === 'left' ? [5, 4, 3, 2, 1] : [1, 2, 3, 4, 5];
+
     return (
       <div className="flex gap-0.5 flex-shrink-0">
-        {[1, 2, 3, 4, 5].map((v) => (
+        {boneValues.map((v) => (
           <Bone
             key={v}
             size={10}
@@ -52,14 +54,12 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
     );
   };
 
-  const { gearTotal, kinksTotal, totalBones } = React.useMemo(() => {
+  const { totalBones } = React.useMemo(() => {
     let gSum = 0;
     let kSum = 0;
     Object.values(gear).forEach((v) => gSum += (v as number));
     Object.values(kinks).forEach((v) => kSum += (v as number));
     return {
-      gearTotal: gSum,
-      kinksTotal: kSum,
       totalBones: gSum + kSum
     };
   }, [gear, kinks]);
@@ -84,12 +84,12 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
 
   const getStatsStyles = (pos: CardPosition) => {
     const [side, vertical] = pos.split('-');
-    let classes = `absolute z-20 flex flex-col gap-2 `;
+    let classes = `absolute z-20 flex flex-col gap-1.5 `;
 
-    // Vertical default is somewhat near top
-    if (vertical === 'top') classes += 'top-24 ';
+    // Vertical positions
+    if (vertical === 'top') classes += 'top-6 ';
     if (vertical === 'middle') classes += 'top-1/2 -translate-y-1/2 ';
-    if (vertical === 'bottom') classes += 'bottom-24 ';
+    if (vertical === 'bottom') classes += 'bottom-20 ';
 
     // Side
     if (side === 'left') {
@@ -111,11 +111,23 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
   return (
     <div id="card-preview-container" className={`relative w-[360px] h-auto min-h-[640px] rounded-2xl overflow-hidden bg-black flex flex-col shadow-2xl border-4 ${borderColor} font-sans`}>
 
+      {/* Preview Warning Overlay */}
+      <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-10">
+        <span className="-rotate-45 text-6xl font-black text-white border-2 border-white px-4 py-2 rounded-xl">PREVIEW ONLY</span>
+      </div>
+
       {/* Top Section: Image + Overlays (Name, Stats, Flag) */}
       <div className="relative w-full aspect-[15/14] bg-neutral-900 overflow-hidden group">
         {/* Main Image */}
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+          <img
+            src={imageUrl}
+            alt={name}
+            className="w-full h-full object-cover transition-transform duration-200"
+            style={{
+              transform: `scale(${data.imageZoom || 1}) translate(${(data.imagePosition?.x || 0)}%, ${(data.imagePosition?.y || 0)}%)`
+            }}
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-neutral-800">
             <span className="text-neutral-600 text-sm font-bold uppercase">Upload Pup Pic</span>
@@ -140,10 +152,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
           <div className={`${pillBaseClass} ${pillRoundedClass}`}>
             {shoeSize || "-"}
           </div>
-          <div className={`${pillBaseClass} ${pillRoundedClass} flex items-center justify-center gap-1.5`}>
-            <Bone size={12} className="fill-white" />
-            <span>{totalBones}</span>
-          </div>
+          {/* Bone Count Removed from Image as requested */}
         </div>
 
         {/* Country Flag Overlay - Always Bottom Right */}
@@ -186,7 +195,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
                   </div>
                 ))}
               </div>
-              {/* Right Column: Name Right, Bones Left */}
+              {/* Right Column: Bones Left, Name Right */}
               <div className="flex-1 space-y-0.5 pl-2">
                 {GEAR_RIGHT.map(cat => (
                   <div key={cat} className="flex items-center justify-between gap-1 h-4 min-w-0">
@@ -218,7 +227,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
                   </div>
                 ))}
               </div>
-              {/* Right Column: Name Right, Bones Left */}
+              {/* Right Column: Bones Left, Name Right */}
               <div className="flex-1 space-y-0.5 pl-2">
                 {KINKS_RIGHT.map(cat => (
                   <div key={cat} className="flex items-center justify-between gap-1 h-4 min-w-0">
