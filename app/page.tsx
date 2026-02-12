@@ -218,49 +218,59 @@ const App: React.FC = () => {
         return new Blob([bytes], { type: mime });
     };
 
+    // Helper: draw an ImageBitmap or Image to a canvas and export as JPEG Blob
+    const canvasCompress = (
+        source: ImageBitmap | HTMLImageElement,
+        srcWidth: number,
+        srcHeight: number,
+        maxWidth: number,
+        quality: number
+    ): Promise<Blob> => {
+        const ratio = srcWidth / srcHeight;
+        const width = Math.min(srcWidth, maxWidth);
+        const height = Math.round(width / ratio);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return Promise.reject(new Error('Canvas context failed'));
+        ctx.drawImage(source, 0, 0, width, height);
+        if (source instanceof ImageBitmap) source.close(); // free memory
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(
+                (blob) => blob ? resolve(blob) : reject(new Error('toBlob returned null')),
+                'image/jpeg',
+                quality
+            );
+        });
+    };
+
     // Helper: resize an image via canvas and return as Blob
-    const compressToBlob = (src: string, maxWidth: number, quality: number): Promise<Blob> => {
+    // Uses fetch + createImageBitmap for blob:/data: URLs (avoids Mobile Safari Image bugs)
+    // Falls back to Image element for http: URLs or when createImageBitmap is unavailable
+    const compressToBlob = async (src: string, maxWidth: number, quality: number): Promise<Blob> => {
+        // Strategy 1: For blob: and data: URLs, use fetch + createImageBitmap
+        // This completely bypasses new Image() which has multiple Mobile Safari bugs:
+        //   - crossOrigin on blob: URLs causes load failure
+        //   - canvas can be tainted even without crossOrigin
+        //   - onload race conditions with cached images
+        if ((src.startsWith('blob:') || src.startsWith('data:')) && typeof createImageBitmap === 'function') {
+            const response = await fetch(src);
+            const blob = await response.blob();
+            const bitmap = await createImageBitmap(blob);
+            return canvasCompress(bitmap, bitmap.width, bitmap.height, maxWidth, quality);
+        }
+
+        // Strategy 2: Image element for http: URLs or old browsers without createImageBitmap
         return new Promise((resolve, reject) => {
             const img = new Image();
-
-            // CRITICAL: Only set crossOrigin for external http(s) URLs.
-            // Setting crossOrigin on blob: or data: URLs breaks Mobile Safari —
-            // it refuses to load the image and fires onerror instead of onload.
             if (src.startsWith('http')) {
                 img.crossOrigin = 'anonymous';
             }
-
-            // CRITICAL: Set event handlers BEFORE setting src.
-            // On mobile browsers the image can load synchronously from cache,
-            // so if onload is assigned after src the handler is never called.
             img.onload = () => {
-                try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) return reject(new Error('Canvas context failed'));
-
-                    const ratio = img.width / img.height;
-                    const width = Math.min(img.width, maxWidth);
-                    const height = width / ratio;
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    canvas.toBlob(
-                        (blob) => {
-                            if (blob) {
-                                resolve(blob);
-                            } else {
-                                reject(new Error('Canvas compression failed'));
-                            }
-                        },
-                        'image/jpeg',
-                        quality
-                    );
-                } catch (e) {
-                    reject(e);
-                }
+                canvasCompress(img, img.width, img.height, maxWidth, quality)
+                    .then(resolve)
+                    .catch(reject);
             };
             img.onerror = () => reject(new Error('Image load failed'));
             img.src = src;
