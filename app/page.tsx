@@ -219,6 +219,7 @@ const App: React.FC = () => {
     };
 
     // Helper: resize an image via canvas and return as Blob
+    // Helper: resize an image via canvas and return as Blob
     const compressToBlob = (base64: string, maxWidth: number, quality: number): Promise<Blob> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -226,7 +227,7 @@ const App: React.FC = () => {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return resolve(dataURLtoBlob(base64));
+                if (!ctx) return reject(new Error('Canvas context failed'));
 
                 const ratio = img.width / img.height;
                 const width = Math.min(img.width, maxWidth);
@@ -235,8 +236,15 @@ const App: React.FC = () => {
                 canvas.width = width;
                 canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
+
                 canvas.toBlob(
-                    (blob) => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')),
+                    (blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Canvas compression failed'));
+                        }
+                    },
                     'image/jpeg',
                     quality
                 );
@@ -282,27 +290,50 @@ const App: React.FC = () => {
             }
 
             // 2. Compress images to binary Blobs (much smaller than base64 in JSON)
+            // Stricter limits for mobile: 800px max width, 0.7 quality
             const originalBlob = card.imageUrl?.startsWith('data:')
-                ? await compressToBlob(card.imageUrl, 1200, 0.8)
+                ? await compressToBlob(card.imageUrl, 800, 0.7)
                 : null;
 
             const cardCaptureBlob = capturedCardImage
-                ? await compressToBlob(capturedCardImage, 1000, 0.8)
+                ? await compressToBlob(capturedCardImage, 800, 0.7)
                 : null;
 
             if (!originalBlob && !cardCaptureBlob) {
                 throw new Error('Could not process any images. Please try again or use a different browser.');
             }
 
-            // 3. Build FormData (binary upload — no base64 overhead)
             const { imageUrl: _excludedImage, ...cardWithoutImage } = card;
             const formData = new FormData();
-            formData.append('card', JSON.stringify({
+
+            // 3. Payload Size Check Before Sending
+            const MAX_PAYLOAD_SIZE = 4 * 1024 * 1024; // 4MB safe limit (Vercel is 4.5MB)
+            let totalSize = 0;
+
+            if (originalBlob) totalSize += originalBlob.size;
+            if (cardCaptureBlob) totalSize += cardCaptureBlob.size;
+
+            // Estimate JSON size
+            const jsonPart = JSON.stringify({
                 ...cardWithoutImage,
                 totalBones: calculateTotalBones(card.gear, card.kinks),
                 newsletter: newsletterSubscribe,
-            }));
-            formData.append('cardText', getPhotoshopTXTContent());
+            });
+            totalSize += new Blob([jsonPart]).size;
+
+            const textPart = getPhotoshopTXTContent();
+            totalSize += new Blob([textPart]).size;
+
+            if (totalSize > MAX_PAYLOAD_SIZE) {
+                throw new Error(`File size too large (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try a different photo.`);
+            }
+
+            formData.append('card', jsonPart);
+            formData.append('cardText', textPart); // Fixed: send plain text, not base64 encoded string from function, wait, route expects it? 
+            // Looking at route.ts: 
+            // const cardText = formData.get('cardText') as string | null;
+            // if (cardText) { attachments.push({ filename: ..., content: Buffer.from(cardText).toString('base64') }) }
+            // So we send plain text here and route handles encoding. Correct.
 
             if (originalBlob) {
                 formData.append('originalImage', originalBlob, `${card.name.replace(/\s+/g, '_')}_original.jpg`);
@@ -341,7 +372,11 @@ const App: React.FC = () => {
         } catch (err: any) {
             console.error('Send Error:', err);
             setSubmitStatus('error');
-            setSendError(err.message || 'An unexpected error occurred. Please try again.');
+            let msg = err.message || 'An unexpected error occurred. Please try again.';
+            if (msg.includes('Load failed') || msg.includes('d failed')) { // Network error often says "Load failed"
+                msg = "Network request failed. Your image might still be too large or connection is unstable.";
+            }
+            setSendError(msg);
             setIsSending(false);
         }
     };
