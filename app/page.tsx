@@ -295,6 +295,28 @@ const App: React.FC = () => {
                 // Wait for layout stability
                 await new Promise(resolve => setTimeout(resolve, 100));
 
+                // Pre-convert blob: URLs to data: URLs inside the node so
+                // html-to-image can serialize them (blob: URLs fail on iOS WebKit)
+                const imgElements = node.querySelectorAll('img');
+                const originalSrcs: { el: HTMLImageElement; src: string }[] = [];
+                for (const img of imgElements) {
+                    if (img.src.startsWith('blob:')) {
+                        try {
+                            const resp = await fetch(img.src);
+                            const blob = await resp.blob();
+                            const dataUrl = await new Promise<string>((resolve) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result as string);
+                                reader.readAsDataURL(blob);
+                            });
+                            originalSrcs.push({ el: img, src: img.src });
+                            img.src = dataUrl;
+                        } catch {
+                            // If conversion fails, leave original src — capture may still partially work
+                        }
+                    }
+                }
+
                 try {
                     // Optimized capture settings for Mobile Safari stability
                     capturedCardImage = await htmlToImage.toPng(node, {
@@ -325,6 +347,11 @@ const App: React.FC = () => {
                     console.error('Card capture failed (likely memory limit):', e);
                     // CRITICAL: We DO NOT stop. We proceed without the screenshot.
                     // The user's original image and data are more important.
+                } finally {
+                    // Restore original blob: URLs to free the data URL memory
+                    for (const { el, src } of originalSrcs) {
+                        el.src = src;
+                    }
                 }
             }
 
@@ -478,6 +505,13 @@ const App: React.FC = () => {
     // Validation: all required fields + bones in range + consent
     const canSend = isCardValid();
 
+    // Detect iOS (all iOS browsers use WebKit, which has canvas/blob bugs)
+    const isIOS = React.useMemo(() => {
+        if (typeof navigator === 'undefined') return false;
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+    }, []);
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-8 relative">
 
@@ -549,6 +583,21 @@ const App: React.FC = () => {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 py-8">
+
+                {/* iOS Warning Banner */}
+                {isIOS && (
+                    <div className="mb-6 p-4 bg-amber-900/30 border border-amber-500/50 rounded-xl flex items-start gap-3 shadow-lg">
+                        <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={20} />
+                        <div>
+                            <p className="text-sm font-bold text-amber-200">iOS Device Detected</p>
+                            <p className="text-xs text-amber-300/80 mt-1">
+                                Sending cards from Safari or any iOS browser may not work due to Apple restrictions.
+                                For the best experience, please <strong className="text-white">use a desktop/laptop computer</strong> or
+                                an <strong className="text-white">Android device</strong> to submit your card.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* READY BANNER */}
                 {canSend && (
