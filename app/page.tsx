@@ -214,38 +214,40 @@ const App: React.FC = () => {
         setSubmitStatus('sending');
         setSendError(null);
 
-        // Still offer standard downloads as backup
-        handleExportPhotoshopTXT();
+        // Attempt downloads as backup (don't let failures block the send)
+        try { handleExportPhotoshopTXT(); } catch (e) { console.warn('TXT download skipped:', e); }
 
         try {
-            // 1. Capture the card as an image
+            // 1. Try to capture the card as an image (may fail on mobile)
+            let capturedCardImage: string | null = null;
             const node = document.getElementById('card-preview-container');
-            if (!node) {
-                throw new Error("Card preview element not found");
+
+            if (node) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                try {
+                    capturedCardImage = await htmlToImage.toPng(node, {
+                        quality: 0.95,
+                        backgroundColor: '#000000',
+                        cacheBust: false, // cacheBust breaks CORS for external images (flags) on mobile
+                        style: {
+                            borderRadius: '0',
+                            margin: '0',
+                        },
+                    });
+
+                    // Try to download the captured image (may not work on mobile)
+                    try {
+                        const link = document.createElement('a');
+                        link.download = `${card.name.replace(/\s+/g, '_')}_final.png`;
+                        link.href = capturedCardImage;
+                        link.click();
+                    } catch (e) { console.warn('Card image download skipped:', e); }
+                } catch (e) {
+                    console.warn('Card capture failed (common on mobile):', e);
+                }
             }
 
-            // Small delay to ensure any pending renders are complete
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            const dataUrl = await htmlToImage.toPng(node, {
-                quality: 0.95,
-                backgroundColor: '#000000',
-                cacheBust: true,
-                style: {
-                    borderRadius: '0',
-                    margin: '0',
-                },
-                // Skip fonts if they are still causing issues, but try with them first
-                // skipFonts: false, 
-            });
-
-            // 2. Trigger a download of the captured image as well
-            const link = document.createElement('a');
-            link.download = `${card.name.replace(/\s+/g, '_')}_final.png`;
-            link.href = dataUrl;
-            link.click();
-
-            // 3. Optimize images for the API payload (limit is usually ~4.5MB)
+            // 2. Optimize images for the API payload
             const shrinkImage = async (base64: string, maxWidth = 1200): Promise<string> => {
                 return new Promise((resolve) => {
                     const img = new Image();
@@ -262,19 +264,26 @@ const App: React.FC = () => {
                         canvas.width = width;
                         canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
-                        // Using jpeg for the payload to save space significantly
                         resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
                     img.onerror = () => resolve(base64);
                 });
             };
 
-            const optimizedCardImage = await shrinkImage(dataUrl, 1000);
-            const optimizedOriginal = card.imageUrl.startsWith('data:')
-                ? await shrinkImage(card.imageUrl, 1200)
-                : card.imageUrl;
+            const optimizedCardImage = capturedCardImage
+                ? await shrinkImage(capturedCardImage, 1000)
+                : null;
 
-            // 4. Send to our API (exclude imageUrl from card to avoid sending the full unoptimized image)
+            const optimizedOriginal = card.imageUrl?.startsWith('data:')
+                ? await shrinkImage(card.imageUrl, 1200)
+                : card.imageUrl || null;
+
+            // At least one image is needed
+            if (!optimizedCardImage && !optimizedOriginal) {
+                throw new Error('Could not process any images. Please try again or use a different browser.');
+            }
+
+            // 3. Send to our API (exclude imageUrl from card to avoid sending the full unoptimized image)
             const { imageUrl: _excludedImage, ...cardWithoutImage } = card;
             const response = await fetch('/api/send-card', {
                 method: 'POST',
@@ -286,7 +295,7 @@ const App: React.FC = () => {
                         ...cardWithoutImage,
                         totalBones: calculateTotalBones(card.gear, card.kinks)
                     },
-                    imageData: optimizedCardImage,
+                    imageData: optimizedCardImage || optimizedOriginal,
                     cardText: getPhotoshopTXTContent(),
                     originalImage: optimizedOriginal,
                     newsletter: newsletterSubscribe
@@ -318,7 +327,7 @@ const App: React.FC = () => {
         } catch (err: any) {
             console.error('Send Error:', err);
             setSubmitStatus('error');
-            setSendError(err.message || 'An unexpected error occurred');
+            setSendError(err.message || 'An unexpected error occurred. Please try from a desktop browser.');
             setIsSending(false);
         }
     };

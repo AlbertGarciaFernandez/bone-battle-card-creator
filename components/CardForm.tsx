@@ -1121,25 +1121,25 @@ const CardForm: React.FC<CardFormProps> = ({
         <div className="fixed inset-x-0 bottom-0 z-[100] flex flex-col justify-end pointer-events-none">
           <div className="absolute inset-0 bg-slate-950/60 transition-opacity pointer-events-auto" onClick={() => setShowCropModal(false)} />
 
-          <div className="relative bg-slate-900/90 backdrop-blur-xl border-t border-slate-700 rounded-t-3xl p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] space-y-6 pointer-events-auto pb-safe">
-            <div className="flex justify-between items-center border-b border-white/10 pb-4">
-              <h3 className="text-lg font-bold text-bone-100 flex items-center gap-2">
-                <ImageIcon size={20} className="text-bone-400" />
+          <div className="relative bg-slate-900/90 backdrop-blur-xl border-t border-slate-700 rounded-t-2xl px-4 pt-4 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] space-y-3 pointer-events-auto pb-safe">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <h3 className="text-sm font-bold text-bone-100 flex items-center gap-2">
+                <ImageIcon size={16} className="text-bone-400" />
                 <span>Adjust Image</span>
               </h3>
               <button
                 onClick={() => setShowCropModal(false)}
-                className="bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-white transition-colors"
+                className="bg-slate-800/50 p-1.5 rounded-full text-slate-400 hover:text-white transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-6 py-2">
-              <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                <div className="flex justify-between text-xs text-slate-400 mb-3 font-bold uppercase tracking-wider">
+            <div className="space-y-3">
+              <div className="bg-black/20 px-3 py-2.5 rounded-lg border border-white/5">
+                <div className="flex justify-between text-[10px] text-slate-400 mb-2 font-bold uppercase tracking-wider">
                   <span>Zoom Level</span>
-                  <span className="text-bone-400 bg-bone-900/30 px-2 py-0.5 rounded">{Math.round((card.imageZoom || 1) * 100)}%</span>
+                  <span className="text-bone-400 bg-bone-900/30 px-1.5 py-0.5 rounded text-[10px]">{Math.round((card.imageZoom || 1) * 100)}%</span>
                 </div>
                 <input
                   type="range"
@@ -1148,13 +1148,13 @@ const CardForm: React.FC<CardFormProps> = ({
                   step="0.01"
                   value={card.imageZoom || 1}
                   onChange={(e) => handleChange('imageZoom', parseFloat(e.target.value))}
-                  className="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500"
+                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                  <div className="flex justify-between text-[10px] text-slate-400 mb-2 font-bold uppercase">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-black/20 px-3 py-2.5 rounded-lg border border-white/5">
+                  <div className="flex justify-between text-[10px] text-slate-400 mb-1.5 font-bold uppercase">
                     <span>Move X</span>
                     <span className="text-indigo-400">{(card.imagePosition?.x || 0)}%</span>
                   </div>
@@ -1169,8 +1169,8 @@ const CardForm: React.FC<CardFormProps> = ({
                   />
                 </div>
 
-                <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                  <div className="flex justify-between text-[10px] text-slate-400 mb-2 font-bold uppercase">
+                <div className="bg-black/20 px-3 py-2.5 rounded-lg border border-white/5">
+                  <div className="flex justify-between text-[10px] text-slate-400 mb-1.5 font-bold uppercase">
                     <span>Move Y</span>
                     <span className="text-indigo-400">{(card.imagePosition?.y || 0)}%</span>
                   </div>
@@ -1189,7 +1189,7 @@ const CardForm: React.FC<CardFormProps> = ({
 
             <button
               onClick={() => setShowCropModal(false)}
-              className="w-full bg-bone-500 hover:bg-bone-400 text-slate-950 font-black tracking-wide uppercase text-sm py-4 rounded-xl transition-all shadow-lg active:scale-95"
+              className="w-full bg-bone-500 hover:bg-bone-400 text-slate-950 font-black tracking-wide uppercase text-sm py-3 rounded-xl transition-all shadow-lg active:scale-95"
             >
               Apply Changes
             </button>

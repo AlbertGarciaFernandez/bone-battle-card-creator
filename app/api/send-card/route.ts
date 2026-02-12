@@ -36,8 +36,8 @@ export async function POST(req: Request) {
             });
         }
 
-        // 3. Original Uploaded Image
-        if (originalImage) {
+        // 3. Original Uploaded Image (skip if same as card image to avoid duplicates)
+        if (originalImage && originalImage !== imageData) {
             const originalMatches = originalImage.match(/^data:image\/([a-z]+);base64,(.+)$/);
             if (originalMatches) {
                 attachments.push({
@@ -45,13 +45,11 @@ export async function POST(req: Request) {
                     content: originalMatches[2],
                 });
             } else if (!originalImage.startsWith('http')) {
-                // If it's base64 but without prefix for some reason
                 attachments.push({
                     filename: `${card.name.replace(/\s+/g, '_')}_original.jpg`,
                     content: originalImage,
                 });
             }
-            // If it's a URL, we don't attach it as a file here yet, but it's fine for now
         }
 
         // Prepare email content
