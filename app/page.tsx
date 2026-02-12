@@ -274,7 +274,8 @@ const App: React.FC = () => {
                 ? await shrinkImage(card.imageUrl, 1200)
                 : card.imageUrl;
 
-            // 4. Send to our API
+            // 4. Send to our API (exclude imageUrl from card to avoid sending the full unoptimized image)
+            const { imageUrl: _excludedImage, ...cardWithoutImage } = card;
             const response = await fetch('/api/send-card', {
                 method: 'POST',
                 headers: {
@@ -282,7 +283,7 @@ const App: React.FC = () => {
                 },
                 body: JSON.stringify({
                     card: {
-                        ...card,
+                        ...cardWithoutImage,
                         totalBones: calculateTotalBones(card.gear, card.kinks)
                     },
                     imageData: optimizedCardImage,
@@ -292,7 +293,12 @@ const App: React.FC = () => {
                 }),
             });
 
-            const result = await response.json();
+            let result;
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error(`Server error (${response.status}). The request may be too large — try using a smaller image.`);
+            }
 
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to send card');
