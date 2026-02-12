@@ -219,39 +219,51 @@ const App: React.FC = () => {
     };
 
     // Helper: resize an image via canvas and return as Blob
-    // Helper: resize an image via canvas and return as Blob
-    const compressToBlob = (base64: string, maxWidth: number, quality: number): Promise<Blob> => {
+    const compressToBlob = (src: string, maxWidth: number, quality: number): Promise<Blob> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            // Handle cross-origin images (though for local blob/data URLs it's fine)
-            img.crossOrigin = 'anonymous';
-            img.src = base64;
+
+            // CRITICAL: Only set crossOrigin for external http(s) URLs.
+            // Setting crossOrigin on blob: or data: URLs breaks Mobile Safari —
+            // it refuses to load the image and fires onerror instead of onload.
+            if (src.startsWith('http')) {
+                img.crossOrigin = 'anonymous';
+            }
+
+            // CRITICAL: Set event handlers BEFORE setting src.
+            // On mobile browsers the image can load synchronously from cache,
+            // so if onload is assigned after src the handler is never called.
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                if (!ctx) return reject(new Error('Canvas context failed'));
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return reject(new Error('Canvas context failed'));
 
-                const ratio = img.width / img.height;
-                const width = Math.min(img.width, maxWidth);
-                const height = width / ratio;
+                    const ratio = img.width / img.height;
+                    const width = Math.min(img.width, maxWidth);
+                    const height = width / ratio;
 
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
 
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob) {
-                            resolve(blob);
-                        } else {
-                            reject(new Error('Canvas compression failed'));
-                        }
-                    },
-                    'image/jpeg',
-                    quality
-                );
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('Canvas compression failed'));
+                            }
+                        },
+                        'image/jpeg',
+                        quality
+                    );
+                } catch (e) {
+                    reject(e);
+                }
             };
             img.onerror = () => reject(new Error('Image load failed'));
+            img.src = src;
         });
     };
 
@@ -313,13 +325,20 @@ const App: React.FC = () => {
             let originalBlob: Blob | null = null;
             if (card.imageUrl) {
                 try {
-                    // Try to compress whatever URL is there (blob: or data: or http:)
-                    // If it's http and has CORS issues, this will fail safely below
                     originalBlob = await compressToBlob(card.imageUrl, 800, 0.7);
                 } catch (e) {
-                    console.warn('Could not compress original image (likely CORS or format issue):', e);
-                    // If compression fails, we just don't attach the original. 
-                    // This is better than failing the whole request.
+                    console.warn('Canvas compress failed, trying direct blob fetch:', e);
+                    // Fallback: if canvas compression fails (mobile memory limits),
+                    // fetch the blob: URL directly and send the raw file.
+                    // This is larger but guarantees the image gets through.
+                    if (card.imageUrl.startsWith('blob:')) {
+                        try {
+                            const resp = await fetch(card.imageUrl);
+                            originalBlob = await resp.blob();
+                        } catch (e2) {
+                            console.warn('Direct blob fetch also failed:', e2);
+                        }
+                    }
                 }
             }
 
