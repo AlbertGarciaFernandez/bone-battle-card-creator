@@ -9,7 +9,7 @@ import { generateCardImage } from '../services/geminiService';
 import {
     PawPrint, Download, FileText, Send, Instagram, Heart, Globe,
     Code, Camera, Gift, X, CheckCircle, Mail, MessageCircle, BookOpen,
-    Loader2, AlertCircle
+    Loader2, AlertCircle, Sparkles
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 
@@ -67,23 +67,24 @@ const calculateTotalBones = (gear: Record<string, number>, kinks: Record<string,
 };
 
 const INITIAL_CARD: CardData = {
-    name: "Rex",
+    name: "",
     hoodColor: HoodColor.RED,
-    imageUrl: "https://picsum.photos/400/400?grayscale",
-    birthdate: "2021.05",
-    height: "1.78m / 5'10\"",
-    shoeSize: "44EU / 11US",
-    socialLink: "@rex_pup",
-    country: "ES",
+    imageUrl: "",
+    birthdate: "",
+    height: "",
+    shoeSize: "",
+    socialLink: "",
+    country: "",
     consent: false,
+    decisionConsent: false,
     namePosition: 'left-top',
     statsPosition: 'right-middle',
     dogTricksPermission: false,
     dogTricks: "",
     imageZoom: 1,
     imagePosition: { x: 0, y: 0 },
-    gear: Object.fromEntries(GEAR_CATEGORIES.map(c => [c, Math.floor(Math.random() * 3)])),
-    kinks: Object.fromEntries(KINKS_CATEGORIES.map(c => [c, Math.floor(Math.random() * 3)]))
+    gear: Object.fromEntries(GEAR_CATEGORIES.map(c => [c, 0])),
+    kinks: Object.fromEntries(KINKS_CATEGORIES.map(c => [c, 0]))
 };
 
 const App: React.FC = () => {
@@ -93,10 +94,33 @@ const App: React.FC = () => {
 
     // Modal States
     const [showSendModal, setShowSendModal] = useState(false);
+    const [showSupportModal, setShowSupportModal] = useState(false);
     const [newsletterSubscribe, setNewsletterSubscribe] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const [sendError, setSendError] = useState<string | null>(null);
+
+    // Form Validation
+    const isCardValid = () => {
+        const requiredFields = [
+            card.name,
+            card.imageUrl,
+            card.birthdate,
+            card.height,
+            card.shoeSize,
+            card.socialLink,
+            card.country
+        ];
+
+        const hasEmptyFields = requiredFields.some(field => !field || field.trim() === "");
+        const isPawsdayValid = /^\d{4}\.\d{2}$/.test(card.birthdate);
+        const hasConsented = card.consent && card.decisionConsent;
+        const hasTotalBonesInRange = calculateTotalBones(card.gear, card.kinks) >= 50 && calculateTotalBones(card.gear, card.kinks) <= 70;
+
+        return !hasEmptyFields && isPawsdayValid && hasConsented && hasTotalBonesInRange;
+    };
+
+    const isSendDisabled = isSending || submitStatus === 'success' || !isCardValid();
 
     // Game Guide State
     const [showGuideModal, setShowGuideModal] = useState(false);
@@ -123,7 +147,7 @@ const App: React.FC = () => {
         downloadFile(jsonContent, `${card.name || "card"}_data.json`, 'application/json;charset=utf-8');
     };
 
-    const handleExportPhotoshopTXT = () => {
+    const getPhotoshopTXTContent = () => {
         // Build headers for gear and kinks (5 columns each)
         const gearHeaders = GEAR_KEYS_ORDERED.flatMap(item =>
             Array.from({ length: 5 }, (_, i) => `${item.prefix}${i + 1}`)
@@ -171,6 +195,11 @@ const App: React.FC = () => {
         const allValues = [...baseValues, ...gearValues, ...kinkValues];
         const fileContent = `${allHeaders.join('\t')}\n${allValues.join('\t')}`;
 
+        return fileContent;
+    };
+
+    const handleExportPhotoshopTXT = () => {
+        const fileContent = getPhotoshopTXTContent();
         downloadFile(fileContent, `${card.name || 'pup'}_ps_data.txt`, 'text/plain;charset=utf-8');
     };
 
@@ -224,6 +253,8 @@ const App: React.FC = () => {
                         totalBones: calculateTotalBones(card.gear, card.kinks)
                     },
                     imageData: dataUrl,
+                    cardText: getPhotoshopTXTContent(),
+                    originalImage: card.imageUrl, // Send the source image
                     newsletter: newsletterSubscribe
                 }),
             });
@@ -235,12 +266,15 @@ const App: React.FC = () => {
             }
 
             setSubmitStatus('success');
-            // Auto close after 3 seconds on success
+
+            // After 1.5 seconds, close send modal and open support modal
             setTimeout(() => {
                 setShowSendModal(false);
-                setSubmitStatus('idle');
-                setIsSending(false);
-            }, 3000);
+                setShowSupportModal(true);
+                setSubmitStatus('idle'); // Reset for next time
+            }, 1500);
+
+            setIsSending(false);
 
         } catch (err: any) {
             console.error('Send Error:', err);
@@ -285,19 +319,7 @@ const App: React.FC = () => {
     );
 
     // Validation: all required fields + bones in range + consent
-    const isFormValid = Boolean(
-        card.name &&
-        card.hoodColor &&
-        card.height &&
-        card.shoeSize &&
-        card.birthdate &&
-        card.socialLink &&
-        card.country &&
-        card.imageUrl &&
-        card.consent
-    );
-
-    const canSend = isFormValid && totalBones >= MIN_BONES && totalBones <= MAX_BONES;
+    const canSend = isCardValid();
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-8 relative">
@@ -575,54 +597,7 @@ const App: React.FC = () => {
                                 </label>
                             </div>
 
-                            {/* How to Support */}
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-bone-200">
-                                    <Gift size={18} />
-                                    <h3 className="font-bold uppercase text-sm tracking-wider">How to Support Us</h3>
-                                </div>
-                                <div className="text-sm text-slate-300 space-y-2 leading-relaxed bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                                    <p>
-                                        I’m doing all of this because I love to and thus won’t charge anything (you should cover shipping costs and prints of your own cards though).
-                                    </p>
-                                    <p>
-                                        BUT as many pups are asking about how to support all of this… here we go:
-                                    </p>
-                                    <ul className="space-y-4 mt-2">
-                                        <li className="flex flex-col gap-1.5 p-3 rounded-lg bg-orange-950/20 border border-orange-500/20">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-orange-500 font-bold">A) Joker (The Creator)</span>
-                                                <a href="https://amzn.eu/d/70zAVcn" target="_blank" rel="noopener noreferrer" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-blue-400 no-underline">Amazon.de Giftcard</a>
-                                            </div>
-                                            <p className="text-xs text-slate-400">Send to: <span className="text-white font-mono select-all">pup.joker.jx@gmail.com</span></p>
-                                        </li>
-                                        <li className="flex flex-col gap-1.5 p-3 rounded-lg bg-slate-800/40 border border-slate-700">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 font-bold">B) Joker's Wishlist</span>
-                                                <a href="https://throne.com/joker_jx" target="_blank" rel="noopener noreferrer" className="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-blue-400 no-underline">Throne List</a>
-                                            </div>
-                                        </li>
-                                        <li className="flex flex-col gap-1.5 p-3 rounded-lg bg-blue-950/20 border border-blue-500/20">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-blue-400 font-bold">C) The Developer (CodeHunter Lab)</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleDeveloperSupport}
-                                                    className="text-[10px] bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-white font-bold transition-all transform hover:scale-105"
-                                                >
-                                                    Support Album App
-                                                </button>
-                                            </div>
-                                            <p className="text-xs text-slate-300">
-                                                Support our developer so we can release the <strong className="text-blue-200">Collectible Card Album App</strong> as soon as possible!
-                                            </p>
-                                        </li>
-                                    </ul>
-                                    <p className="text-[10px] italic text-slate-500 mt-4 border-t border-slate-800 pt-3">
-                                        Feel free to support any way you want, or just enjoy the cards and game for free. I’m happy when you are! ^^
-                                    </p>
-                                </div>
-                            </div>
+
 
                             {/* What's Next */}
                             <div className="space-y-3">
@@ -656,24 +631,27 @@ const App: React.FC = () => {
                             )}
 
                             {submitStatus === 'success' && (
-                                <div className="flex flex-col items-center justify-center p-8 bg-green-900/10 rounded-xl border border-green-500/30">
-                                    <CheckCircle className="w-10 h-10 text-green-500 mb-4" />
-                                    <p className="text-green-200 font-bold text-center">¡Formulario enviado con éxito!</p>
-                                    <p className="text-green-400/60 text-xs mt-1 text-center">Tus archivos se han descargado como respaldo.</p>
+                                <div className="space-y-6">
+                                    <div className="flex flex-col items-center justify-center p-8 bg-green-900/10 rounded-xl border border-green-500/30">
+                                        <CheckCircle className="w-10 h-10 text-green-500 mb-4" />
+                                        <p className="text-green-200 font-bold text-center uppercase tracking-wider">Form Submitted Successfully!</p>
+                                        <p className="text-green-400/60 text-xs mt-1 text-center">Your files have been downloaded as a backup.</p>
+                                    </div>
+                                    <p className="text-center text-slate-400 text-sm animate-pulse">Closing this window and opening support options...</p>
                                 </div>
                             )}
 
                             {submitStatus === 'error' && (
                                 <div className="flex flex-col items-center justify-center p-8 bg-red-900/10 rounded-xl border border-red-500/30">
                                     <AlertCircle className="w-10 h-10 text-red-500 mb-4" />
-                                    <p className="text-red-200 font-bold text-center">Hubo un error al enviar</p>
+                                    <p className="text-red-200 font-bold text-center">Error sending request</p>
                                     <p className="text-red-400 text-xs mt-2 text-center bg-red-950/50 p-2 rounded">{sendError}</p>
                                     <button
                                         type="button"
                                         onClick={() => setSubmitStatus('idle')}
                                         className="mt-4 text-xs text-red-400 hover:text-red-300 underline"
                                     >
-                                        Intentar de nuevo
+                                        Try again
                                     </button>
                                 </div>
                             )}
@@ -698,7 +676,7 @@ const App: React.FC = () => {
                             </button>
                             <button
                                 type="submit"
-                                disabled={isSending || submitStatus === 'success'}
+                                disabled={isSendDisabled}
                                 className={`flex items-center gap-2 px-6 py-2 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 ${submitStatus === 'success'
                                     ? 'bg-green-600 text-white'
                                     : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20'
@@ -707,23 +685,134 @@ const App: React.FC = () => {
                                 {isSending ? (
                                     <>
                                         <Loader2 size={16} className="animate-spin" />
-                                        Enviando...
+                                        Sending...
                                     </>
                                 ) : submitStatus === 'success' ? (
                                     <>
                                         <CheckCircle size={16} />
-                                        ¡Enviado!
+                                        Sent!
                                     </>
                                 ) : (
                                     <>
                                         <Send size={16} />
-                                        Enviar Solicitud
+                                        Send Request
                                     </>
                                 )}
                             </button>
                         </div>
                     </form>
                 </div >
+            )}
+
+            {/* Support Modal - Opens after successful submission */}
+            {showSupportModal && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                        onClick={() => setShowSupportModal(false)}
+                    />
+                    <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 sticky top-0 z-10 backdrop-blur-md">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-orange-500/20 p-2 rounded-lg text-orange-400">
+                                    <Gift size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-white uppercase tracking-tight">Support Bone Battle</h2>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">How to help us grow</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSupportModal(false)}
+                                className="text-slate-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-6">
+                            <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-xl flex items-center gap-3 mb-2">
+                                <CheckCircle className="text-green-500 shrink-0" size={20} />
+                                <p className="text-green-200 text-sm font-medium">Your card request has been sent! Now, consider helping the creators:</p>
+                            </div>
+
+                            <div className="text-sm text-slate-300 space-y-4 leading-relaxed bg-slate-950/50 p-6 rounded-xl border border-slate-800">
+                                <p className="font-medium">
+                                    I’m doing all of this because I love to and thus won’t charge anything (you should cover shipping costs and prints of your own cards though).
+                                </p>
+                                <p className="text-slate-400 italic">
+                                    BUT as many pups are asking about how to support all of this… here we go:
+                                </p>
+
+                                <ul className="space-y-4 mt-2">
+                                    {/* Option A */}
+                                    <li className="flex flex-col gap-2 p-4 rounded-xl bg-orange-950/20 border border-orange-500/20 group hover:border-orange-500/40 transition-all">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-orange-500 font-bold">A) Joker (The Creator)</span>
+                                            <a href="https://amzn.eu/d/70zAVcn" target="_blank" rel="noopener noreferrer" className="text-xs bg-orange-600 hover:bg-orange-500 px-3 py-1.5 rounded-lg text-white font-bold no-underline transition-all">Amazon.de Card</a>
+                                        </div>
+                                        <div className="bg-black/20 p-2 rounded items-center flex justify-between">
+                                            <p className="text-[10px] text-slate-400">Send to: <span className="text-white font-mono select-all">pup.joker.jx@gmail.com</span></p>
+                                            <Mail size={12} className="text-slate-500" />
+                                        </div>
+                                    </li>
+
+                                    {/* Option B */}
+                                    <li className="flex flex-col gap-2 p-4 rounded-xl bg-slate-800/40 border border-slate-700 group hover:border-slate-500/40 transition-all">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-slate-200 font-bold">B) Joker's Wishlist</span>
+                                            <a href="https://throne.com/joker_jx" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-blue-400 font-bold no-underline transition-all">Throne List</a>
+                                        </div>
+                                    </li>
+
+                                    {/* Option C */}
+                                    <li className="relative group overflow-hidden p-5 rounded-xl bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-500/30 shadow-lg shadow-blue-900/10 hover:border-blue-400/50 transition-all">
+                                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <Sparkles size={50} className="text-blue-400" />
+                                        </div>
+                                        <div className="relative z-10 space-y-4">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                                                        <Globe size={18} className="text-blue-400" />
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-blue-100 font-black uppercase tracking-wider text-[10px] block">C) The Developer</span>
+                                                        <h4 className="text-bone-100 font-bold text-base">CodeHunter Lab</h4>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDeveloperSupport}
+                                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 active:scale-95"
+                                                >
+                                                    <Heart size={14} fill="currentColor" />
+                                                    Support Lab
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-blue-200/70 leading-relaxed font-medium">
+                                                Support our developer so we can release the <strong className="text-blue-100 underline decoration-blue-500/50">Collectible Card Album App</strong> even faster!
+                                            </p>
+                                        </div>
+                                    </li>
+                                </ul>
+
+                                <p className="text-center text-[11px] italic text-slate-500 mt-6 border-t border-slate-800 pt-4">
+                                    Feel free to support any way you want, or just enjoy the cards and game for free. I’m happy when you are! ^^
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => setShowSupportModal(false)}
+                                className="w-full py-4 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+                            >
+                                Close and continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
         </div >

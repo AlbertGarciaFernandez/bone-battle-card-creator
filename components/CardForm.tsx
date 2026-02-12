@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES, CardPosition } from '../types';
-import { Image as ImageIcon, Bone, AlertCircle, Upload, Info, Dog } from 'lucide-react';
+import { Image as ImageIcon, Bone, AlertCircle, Upload, Info, Dog, X, Globe, Instagram, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface CardFormProps {
   card: CardData;
@@ -313,11 +313,13 @@ const CardForm: React.FC<CardFormProps> = ({
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
 
   // Social Platform State
-  const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'other'>('instagram');
+  // initialized from card data if available, defaulting to instagram
+  const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'other'>(card.socialPlatform || 'instagram');
 
   // Custom Country State
   const [isCustomCountry, setIsCustomCountry] = useState(false);
   const [customCountryName, setCustomCountryName] = useState('');
+  const [showCropModal, setShowCropModal] = useState(false);
 
   // Update effect to detect if country provided is in list or custom
   useEffect(() => {
@@ -329,6 +331,11 @@ const CardForm: React.FC<CardFormProps> = ({
   const handleChange = (field: keyof CardData, value: any) => {
     setCard({ ...card, [field]: value });
   };
+
+  // Sync social platform
+  useEffect(() => {
+    handleChange('socialPlatform', socialPlatform);
+  }, [socialPlatform]);
 
   const handleMatrixChange = (category: 'gear' | 'kinks', key: string, value: number) => {
     const newMap = { ...card[category], [key]: value };
@@ -453,6 +460,23 @@ const CardForm: React.FC<CardFormProps> = ({
     }
   };
 
+  const renderInfoPanel = () => {
+    if (!activeInfo) return null;
+    return (
+      <div className="md:col-span-2 mt-4 min-h-[80px] relative">
+        <div className="p-4 rounded-lg border transition-all duration-300 bg-slate-950/80 border-bone-500/30 animate-in fade-in slide-in-from-bottom-1">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-bone-400 animate-pulse" />
+            <span className="text-xs font-black text-bone-200 uppercase tracking-widest">{activeInfo}</span>
+          </div>
+          <p className="text-[11px] text-slate-300 leading-relaxed italic">
+            {KINK_DESCRIPTIONS[activeInfo] || GEAR_DESCRIPTIONS[activeInfo]}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
 
@@ -476,11 +500,12 @@ const CardForm: React.FC<CardFormProps> = ({
                 required
                 minLength={2}
                 maxLength={20}
-                className={`w-full bg-slate-900 border rounded-md px-3 py-2 text-sm text-bone-50 focus:border-bone-400 focus:outline-none ${!card.name ? 'border-red-500/50' : 'border-slate-700'
+                className={`w-full bg-slate-900 border rounded-md px-3 py-3 text-base text-bone-50 focus:border-bone-400 focus:outline-none ${!card.name ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                   }`}
-                placeholder="Enter pup name"
+                placeholder="Enter pup name (e.g. Rex)"
               />
-              <p className="text-[10px] text-slate-500 mt-1 italic">
+              {!card.name && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required field</p>}
+              <p className="text-[11px] text-slate-500 mt-1 italic">
                 Don't have a name? Ask your alpha, followers or friends to help find one!
               </p>
             </div>
@@ -492,13 +517,133 @@ const CardForm: React.FC<CardFormProps> = ({
                 value={card.hoodColor}
                 onChange={(e) => handleChange('hoodColor', e.target.value)}
                 required
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-2 text-sm text-bone-50 focus:border-bone-400 focus:outline-none"
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-3 text-base text-bone-50 focus:border-bone-400 focus:outline-none"
               >
                 {Object.values(HoodColor).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              <p className="text-[10px] text-slate-500 mt-1 italic">
+              <p className="text-[11px] text-slate-500 mt-1 italic">
                 The color you identify as. Choose "Multi" if you don't fit one group (like red vs blue).
               </p>
+            </div>
+
+            {/* Image Adjustments - Moved here by user request */}
+            <div className="md:col-span-2 space-y-4">
+              <div className={`mt-2 bg-slate-900/40 p-3 rounded-lg border ${!card.imageUrl ? 'opacity-30 pointer-events-none' : 'border-slate-700'} space-y-4`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon size={12} className="text-slate-500" />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Crop & Position</label>
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowCropModal(true)}
+                      className="sm:hidden flex items-center gap-1.5 text-[10px] bg-bone-500 text-slate-950 px-3 py-2 rounded font-black uppercase tracking-tighter"
+                    >
+                      <ImageIcon size={12} />
+                      Edit Position
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleChange('imageZoom', 1);
+                        handleChange('imagePosition', { x: 0, y: 0 });
+                      }}
+                      className="text-[9px] text-slate-500 hover:text-white underline decoration-slate-700"
+                    >
+                      Reset View
+                    </button>
+                  </div>
+                </div>
+
+                <div className="hidden sm:grid grid-cols-1 gap-4 overflow-hidden">
+                  <div className="flex flex-col gap-4">
+                    {/* Zoom Slider */}
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                        <span>ZOOM</span>
+                        <span className="text-bone-400">{Math.round((card.imageZoom || 1) * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="4"
+                        step="0.01"
+                        value={card.imageZoom || 1}
+                        onChange={(e) => handleChange('imageZoom', parseFloat(e.target.value))}
+                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* X Position */}
+                      <div>
+                        <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                          <span>POS X</span>
+                          <span className="text-bone-400">{(card.imagePosition?.x || 0)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="-100"
+                          max="100"
+                          step="1"
+                          value={card.imagePosition?.x || 0}
+                          onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), x: parseInt(e.target.value) })}
+                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
+                        />
+                      </div>
+
+                      {/* Y Position */}
+                      <div>
+                        <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                          <span>POS Y</span>
+                          <span className="text-bone-400">{(card.imagePosition?.y || 0)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="-100"
+                          max="100"
+                          step="1"
+                          value={card.imagePosition?.y || 0}
+                          onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), y: parseInt(e.target.value) })}
+                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Image Section - Moved right below Crop & Position */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 shadow-inner">
+                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">
+                  1. Choose Your Image <span className="text-red-400">*</span>
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="url"
+                      placeholder="Paste Image URL..."
+                      value={card.imageUrl || ''}
+                      onChange={(e) => handleChange('imageUrl', e.target.value)}
+                      required
+                      className={`w-full bg-slate-950 border rounded-lg px-4 py-3 text-sm text-white focus:border-bone-400 focus:ring-1 focus:ring-bone-400/20 outline-none transition-all ${!card.imageUrl ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
+                        }`}
+                    />
+                    {!card.imageUrl && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Please upload or paste an image</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <label className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-bone-200 px-5 py-3 rounded-lg cursor-pointer border border-slate-600 flex items-center justify-center gap-2 transition-all active:scale-95 group" title="Upload Image">
+                      <Upload size={18} className="group-hover:translate-y-[-1px] transition-transform" />
+                      <span className="text-xs font-bold uppercase tracking-tight sm:hidden">Upload</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    </label>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2 italic flex items-center gap-1">
+                  <Info size={10} /> Tip: Use a vertical portrait for best results.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -536,7 +681,7 @@ const CardForm: React.FC<CardFormProps> = ({
               </label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500 w-12">Meters:</span>
+                  <span className="text-[11px] text-slate-500 w-12">Meters:</span>
                   <input
                     type="number"
                     placeholder="1.78"
@@ -546,12 +691,18 @@ const CardForm: React.FC<CardFormProps> = ({
                     value={cm}
                     onChange={(e) => updateHeightFromCm(e.target.value)}
                     required
-                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-bone-400 outline-none"
+                    className={`flex-1 bg-slate-950 border rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none ${!cm || parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
                   />
-                  <span className="text-xs text-slate-500">m</span>
+                  {!cm && <p className="text-[10px] text-red-500 mt-1 font-bold absolute -bottom-4">Required</p>}
+                  <span className="text-sm text-slate-500">m</span>
                 </div>
+                {parseFloat(cm) > 0 && (parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5) && (
+                  <p className="text-[10px] text-red-400 flex items-center gap-1 pl-14">
+                    <AlertTriangle size={10} /> Looks a bit unlikely? (1.0m - 2.5m)
+                  </p>
+                )}
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500 w-12">Feet:</span>
+                  <span className="text-[11px] text-slate-500 w-12">Feet:</span>
                   <input
                     type="number"
                     placeholder="5"
@@ -559,9 +710,9 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="8"
                     value={ft}
                     onChange={(e) => updateHeightFromFtIn(e.target.value, inch)}
-                    className="w-10 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-bone-400 outline-none"
+                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none"
                   />
-                  <span className="text-xs text-slate-500">ft</span>
+                  <span className="text-sm text-slate-500">ft</span>
                   <input
                     type="number"
                     placeholder="10"
@@ -569,9 +720,9 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="11"
                     value={inch}
                     onChange={(e) => updateHeightFromFtIn(ft, e.target.value)}
-                    className="w-10 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-bone-400 outline-none"
+                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none"
                   />
-                  <span className="text-xs text-slate-500">in</span>
+                  <span className="text-sm text-slate-500">in</span>
                 </div>
               </div>
             </div>
@@ -582,7 +733,7 @@ const CardForm: React.FC<CardFormProps> = ({
               </label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500 w-12">EU:</span>
+                  <span className="text-[11px] text-slate-500 w-12">EU:</span>
                   <input
                     type="number"
                     placeholder="44"
@@ -591,12 +742,18 @@ const CardForm: React.FC<CardFormProps> = ({
                     value={euShoe}
                     onChange={(e) => updateShoeFromEu(e.target.value)}
                     required
-                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-bone-400 outline-none"
+                    className={`flex-1 bg-slate-950 border rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none ${!euShoe || parseFloat(euShoe) < 35 || parseFloat(euShoe) > 50 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
                   />
-                  <span className="text-xs text-slate-500">EU</span>
+                  {!euShoe && <p className="text-[10px] text-red-500 mt-1 font-bold absolute -bottom-4">Required</p>}
+                  <span className="text-sm text-slate-500">EU</span>
                 </div>
+                {parseFloat(euShoe) > 0 && (parseFloat(euShoe) < 35 || parseFloat(euShoe) > 50) && (
+                  <p className="text-[10px] text-red-400 flex items-center gap-1 pl-14">
+                    <AlertTriangle size={10} /> Standard range is 35-50 EU
+                  </p>
+                )}
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500 w-12">US:</span>
+                  <span className="text-[11px] text-slate-500 w-12">US:</span>
                   <input
                     type="number"
                     placeholder="11"
@@ -604,9 +761,9 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="16"
                     value={usShoe}
                     onChange={(e) => updateShoeFromUs(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-bone-400 outline-none"
+                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none"
                   />
-                  <span className="text-xs text-slate-500">US</span>
+                  <span className="text-sm text-slate-500">US</span>
                 </div>
               </div>
             </div>
@@ -625,9 +782,10 @@ const CardForm: React.FC<CardFormProps> = ({
                 onChange={(e) => handlePawsdayChange(e.target.value)}
                 onBlur={handlePawsdayBlur}
                 required
-                className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.birthdate || !/^\d{4}\.\d{2}$/.test(card.birthdate) ? 'border-red-500/50' : 'border-slate-700'
+                className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.birthdate || !/^\d{4}\.\d{2}$/.test(card.birthdate) ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                   }`}
               />
+              {!card.birthdate && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required</p>}
             </div>
             <div>
               <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
@@ -646,7 +804,8 @@ const CardForm: React.FC<CardFormProps> = ({
                       }
                     }}
                     required
-                    className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none"
+                    className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.country ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
+                      }`}
                   >
                     <option value="">Select...</option>
                     {COUNTRIES.map((c) => (
@@ -657,23 +816,27 @@ const CardForm: React.FC<CardFormProps> = ({
                     <option value="OTHER">+ Other / Custom</option>
                   </select>
                 ) : (
-                  <div className="flex gap-1 w-full">
-                    <input
-                      type="text"
-                      placeholder="Country Code (e.g. FR, DE)"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none"
-                      value={card.country}
-                      onChange={(e) => handleChange('country', e.target.value.toUpperCase().slice(0, 3))}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomCountry(false)}
-                      className="px-2 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:text-white"
-                    >
-                      Reset
-                    </button>
+                  <div className="flex flex-col gap-1 w-full">
+                    <div className="flex gap-1">
+                      <input
+                        type="text"
+                        placeholder="Country Code (e.g. FR, DE)"
+                        className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.country ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
+                          }`}
+                        value={card.country}
+                        onChange={(e) => handleChange('country', e.target.value.toUpperCase().slice(0, 3))}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCountry(false)}
+                        className="px-2 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:text-white"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
                 )}
+                {!card.country && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required</p>}
               </div>
             </div>
           </div>
@@ -684,25 +847,27 @@ const CardForm: React.FC<CardFormProps> = ({
             </label>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
                   <input
                     type="radio"
                     name="socialPlatform"
                     checked={socialPlatform === 'instagram'}
                     onChange={() => setSocialPlatform('instagram')}
-                    className="w-3 h-3 accent-purple-500"
+                    className="w-4 h-4 accent-purple-500"
                   />
-                  <span className="text-xs text-slate-300">Instagram</span>
+                  <Instagram size={14} className="text-purple-400" />
+                  <span className="text-xs text-slate-300 font-bold">Instagram</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
                   <input
                     type="radio"
                     name="socialPlatform"
                     checked={socialPlatform === 'other'}
                     onChange={() => setSocialPlatform('other')}
-                    className="w-3 h-3 accent-purple-500"
+                    className="w-4 h-4 accent-blue-500"
                   />
-                  <span className="text-xs text-slate-300">Other</span>
+                  <Globe size={14} className="text-blue-400" />
+                  <span className="text-xs text-slate-300 font-bold">Other</span>
                 </label>
               </div>
               <input
@@ -711,118 +876,16 @@ const CardForm: React.FC<CardFormProps> = ({
                 value={card.socialLink}
                 onChange={(e) => handleChange('socialLink', e.target.value)}
                 required
-                className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.socialLink ? 'border-red-500/50' : 'border-slate-700'
+                className={`w-full bg-slate-900 border rounded-md px-3 py-3 text-base text-white focus:border-bone-400 focus:outline-none ${!card.socialLink ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                   }`}
               />
+              {!card.socialLink && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required field</p>}
             </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
-              Image <span className="text-red-400">*</span>
-            </label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="url"
-                  placeholder="https://... or upload"
-                  value={card.imageUrl || ''}
-                  onChange={(e) => handleChange('imageUrl', e.target.value)}
-                  required
-                  className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.imageUrl ? 'border-red-500/50' : 'border-slate-700'
-                    }`}
-                />
-              </div>
-              <label className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md cursor-pointer border border-slate-600 flex items-center justify-center transition-colors" title="Upload Image">
-                <Upload size={14} />
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              </label>
-              <button
-                type="button"
-                onClick={onGenerateImage}
-                disabled={isGeneratingImage || !card.name}
-                className="bg-purple-700 hover:bg-purple-600 text-white px-3 py-1.5 rounded-md flex items-center justify-center transition-colors border border-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Generate AI Image"
-              >
-                {isGeneratingImage ? <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" /> : <ImageIcon size={14} />}
-              </button>
-            </div>
-          </div>
 
-          {/* Image Adjustments */}
-          <div className={`mt-2 bg-slate-900/40 p-3 rounded-lg border ${!card.imageUrl ? 'opacity-30 pointer-events-none' : 'border-slate-700'} space-y-4`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon size={12} className="text-slate-500" />
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Crop & Position</label>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  handleChange('imageZoom', 1);
-                  handleChange('imagePosition', { x: 0, y: 0 });
-                }}
-                className="text-[9px] text-slate-500 hover:text-white underline decoration-slate-700"
-              >
-                Reset View
-              </button>
-            </div>
 
-            <div className="grid grid-cols-1 gap-4">
-              {/* Zoom Slider */}
-              <div>
-                <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
-                  <span>ZOOM</span>
-                  <span className="text-bone-400">{Math.round((card.imageZoom || 1) * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="4"
-                  step="0.01"
-                  value={card.imageZoom || 1}
-                  onChange={(e) => handleChange('imageZoom', parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* X Position */}
-                <div>
-                  <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
-                    <span>POS X</span>
-                    <span className="text-bone-400">{(card.imagePosition?.x || 0)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-100"
-                    max="100"
-                    step="1"
-                    value={card.imagePosition?.x || 0}
-                    onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), x: parseInt(e.target.value) })}
-                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
-                  />
-                </div>
-
-                {/* Y Position */}
-                <div>
-                  <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
-                    <span>POS Y</span>
-                    <span className="text-bone-400">{(card.imagePosition?.y || 0)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-100"
-                    max="100"
-                    step="1"
-                    value={card.imagePosition?.y || 0}
-                    onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), y: parseInt(e.target.value) })}
-                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500 hover:accent-bone-400 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* BONE MATRIX */}
@@ -843,28 +906,26 @@ const CardForm: React.FC<CardFormProps> = ({
               {[...GEAR_CATEGORIES].slice(0, 4).map(item => (
                 <div key={item} className="grid items-center justify-between gap-1.5 group relative">
                   <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate">{item}</span>
+                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
                     <button
                       type="button"
                       onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      onMouseEnter={() => setActiveInfo(item)}
-                      onMouseLeave={() => setActiveInfo(null)}
-                      className="focus:outline-none"
+                      className="focus:outline-none p-1 -m-1"
                     >
-                      <Info size={11} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
+                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
                     </button>
                   </div>
-                  <div className="flex gap-0.5 bg-slate-800/50 rounded p-0.5 flex-shrink-0">
+                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
                     {[0, 1, 2, 3, 4, 5].map(v => (
                       <button
                         key={v}
                         onClick={() => handleMatrixChange('gear', item, v)}
-                        className={`w-[18px] h-[18px] rounded-sm flex items-center justify-center transition-all ${(card.gear[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400'
+                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.gear[item] || 0) >= v && v > 0
+                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
+                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
                           }`}
                       >
-                        {v === 0 ? <span className="text-[8px] text-slate-500 font-bold">x</span> : <Bone size={9} className="fill-current" />}
+                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
                       </button>
                     ))}
                   </div>
@@ -872,34 +933,34 @@ const CardForm: React.FC<CardFormProps> = ({
               ))}
             </div>
 
+            {renderInfoPanel()}
+
             {/* Gear Right Column */}
             <div className="space-y-1.5">
               <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1 opacity-0">Gear</h5>
               {[...GEAR_CATEGORIES].slice(4).map(item => (
                 <div key={item} className="grid items-center justify-between gap-1.5 group relative">
                   <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate">{item}</span>
+                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
                     <button
                       type="button"
                       onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      onMouseEnter={() => setActiveInfo(item)}
-                      onMouseLeave={() => setActiveInfo(null)}
-                      className="focus:outline-none"
+                      className="focus:outline-none p-1 -m-1"
                     >
-                      <Info size={11} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
+                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
                     </button>
                   </div>
-                  <div className="flex gap-0.5 bg-slate-800/50 rounded p-0.5 flex-shrink-0">
+                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
                     {[0, 1, 2, 3, 4, 5].map(v => (
                       <button
                         key={v}
                         onClick={() => handleMatrixChange('gear', item, v)}
-                        className={`w-[18px] h-[18px] rounded-sm flex items-center justify-center transition-all ${(card.gear[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400'
+                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.gear[item] || 0) >= v && v > 0
+                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
+                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
                           }`}
                       >
-                        {v === 0 ? <span className="text-[8px] text-slate-500 font-bold">x</span> : <Bone size={9} className="fill-current" />}
+                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
                       </button>
                     ))}
                   </div>
@@ -913,34 +974,34 @@ const CardForm: React.FC<CardFormProps> = ({
               {[...KINKS_CATEGORIES].slice(0, 6).map(item => (
                 <div key={item} className="grid items-center justify-between gap-1.5 group relative">
                   <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate">{item}</span>
+                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
                     <button
                       type="button"
                       onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      onMouseEnter={() => setActiveInfo(item)}
-                      onMouseLeave={() => setActiveInfo(null)}
-                      className="focus:outline-none"
+                      className="focus:outline-none p-1 -m-1"
                     >
-                      <Info size={11} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
+                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
                     </button>
                   </div>
-                  <div className="flex gap-0.5 bg-slate-800/50 rounded p-0.5 flex-shrink-0">
+                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
                     {[0, 1, 2, 3, 4, 5].map(v => (
                       <button
                         key={v}
                         onClick={() => handleMatrixChange('kinks', item, v)}
-                        className={`w-[18px] h-[18px] rounded-sm flex items-center justify-center transition-all ${(card.kinks[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400'
+                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.kinks[item] || 0) >= v && v > 0
+                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
+                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
                           }`}
                       >
-                        {v === 0 ? <span className="text-[8px] text-slate-500 font-bold">x</span> : <Bone size={9} className="fill-current" />}
+                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
                       </button>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
+
+            {renderInfoPanel()}
 
             {/* Kinks Right Column */}
             <div className="space-y-1.5">
@@ -948,28 +1009,26 @@ const CardForm: React.FC<CardFormProps> = ({
               {[...KINKS_CATEGORIES].slice(6).map(item => (
                 <div key={item} className="grid items-center justify-between gap-1.5 group relative">
                   <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate">{item}</span>
+                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
                     <button
                       type="button"
                       onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      onMouseEnter={() => setActiveInfo(item)}
-                      onMouseLeave={() => setActiveInfo(null)}
-                      className="focus:outline-none"
+                      className="focus:outline-none p-1 -m-1"
                     >
-                      <Info size={11} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
+                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
                     </button>
                   </div>
-                  <div className="flex gap-0.5 bg-slate-800/50 rounded p-0.5 flex-shrink-0">
+                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
                     {[0, 1, 2, 3, 4, 5].map(v => (
                       <button
                         key={v}
                         onClick={() => handleMatrixChange('kinks', item, v)}
-                        className={`w-[18px] h-[18px] rounded-sm flex items-center justify-center transition-all ${(card.kinks[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400'
+                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.kinks[item] || 0) >= v && v > 0
+                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
+                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
                           }`}
                       >
-                        {v === 0 ? <span className="text-[8px] text-slate-500 font-bold">x</span> : <Bone size={9} className="fill-current" />}
+                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
                       </button>
                     ))}
                   </div>
@@ -978,30 +1037,8 @@ const CardForm: React.FC<CardFormProps> = ({
             </div>
           </div>
 
-          {/* Dedicated Info Panel */}
-          <div className="mt-6 min-h-[90px] relative">
-            <div className={`p-4 rounded-lg border transition-all duration-300 ${activeInfo
-              ? 'bg-slate-950/80 border-bone-500/30'
-              : 'bg-slate-900/10 border-slate-800/50 opacity-40'
-              }`}>
-              {activeInfo ? (
-                <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-bone-400 animate-pulse" />
-                    <span className="text-xs font-black text-bone-200 uppercase tracking-widest">{activeInfo}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed italic">
-                    {KINK_DESCRIPTIONS[activeInfo] || GEAR_DESCRIPTIONS[activeInfo] || "Selection details..."}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-2 text-slate-600">
-                  <Info size={18} className="mb-1 opacity-20" />
-                  <span className="text-[9px] uppercase font-bold tracking-widest opacity-40 italic">Hover or Click icons for details</span>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Dedicated Info Panel rendered inside columns logic now, but keeping this as backup for hover if needed or removing if replaced */}
+          {/* We'll use a local helper to render it between columns */}
 
           {/* Breakdown Summary inside Bone Values container */}
           <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-wrap items-center justify-end gap-4">
@@ -1067,21 +1104,119 @@ const CardForm: React.FC<CardFormProps> = ({
 
         </div>
 
-        <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.consent ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/30'
-          }`}>
-          <input
-            type="checkbox"
-            checked={card.consent}
-            onChange={(e) => handleChange('consent', e.target.checked)}
-            required
-            className="mt-1 cursor-pointer w-4 h-4 accent-blue-500"
-          />
-          <p className="text-xs text-blue-200">
-            <span className="text-red-400">*</span> I give permission for using my image and information to create and promote this card for Bone Battle.
-          </p>
-        </div>
+        <div className="space-y-3">
+          <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.consent ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/30'
+            }`}>
+            <input
+              type="checkbox"
+              id="consent-main"
+              checked={card.consent}
+              onChange={(e) => handleChange('consent', e.target.checked)}
+              required
+              className="mt-1 cursor-pointer w-5 h-5 accent-blue-500"
+            />
+            <label htmlFor="consent-main" className="text-sm text-blue-200 cursor-pointer">
+              <span className="text-red-400">*</span> I give permission for using my image and information to create and promote this card for Bone Battle.
+            </label>
+          </div>
 
+          <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.decisionConsent ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/30'
+            }`}>
+            <input
+              type="checkbox"
+              id="consent-preview"
+              checked={card.decisionConsent}
+              onChange={(e) => handleChange('decisionConsent', e.target.checked)}
+              required
+              className="mt-1 cursor-pointer w-5 h-5 accent-blue-500"
+            />
+            <label htmlFor="consent-preview" className="text-sm text-blue-200 cursor-pointer">
+              <span className="text-red-400">*</span> I accept that this is a preview of the card and the creator (joker.pup.jx) has the final decision on the positioning of elements.
+            </label>
+          </div>
+        </div>
       </div>
+
+      {/* Crop Modal for Mobile */}
+      {showCropModal && (
+        <div className="fixed inset-x-0 bottom-0 z-[100] flex flex-col justify-end pointer-events-none">
+          <div className="absolute inset-0 bg-slate-950/60 transition-opacity pointer-events-auto" onClick={() => setShowCropModal(false)} />
+
+          <div className="relative bg-slate-900/90 backdrop-blur-xl border-t border-slate-700 rounded-t-3xl p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] space-y-6 pointer-events-auto pb-safe">
+            <div className="flex justify-between items-center border-b border-white/10 pb-4">
+              <h3 className="text-lg font-bold text-bone-100 flex items-center gap-2">
+                <ImageIcon size={20} className="text-bone-400" />
+                <span>Adjust Image</span>
+              </h3>
+              <button
+                onClick={() => setShowCropModal(false)}
+                className="bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6 py-2">
+              <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                <div className="flex justify-between text-xs text-slate-400 mb-3 font-bold uppercase tracking-wider">
+                  <span>Zoom Level</span>
+                  <span className="text-bone-400 bg-bone-900/30 px-2 py-0.5 rounded">{Math.round((card.imageZoom || 1) * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="4"
+                  step="0.01"
+                  value={card.imageZoom || 1}
+                  onChange={(e) => handleChange('imageZoom', parseFloat(e.target.value))}
+                  className="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-bone-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                  <div className="flex justify-between text-[10px] text-slate-400 mb-2 font-bold uppercase">
+                    <span>Move X</span>
+                    <span className="text-indigo-400">{(card.imagePosition?.x || 0)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    value={card.imagePosition?.x || 0}
+                    onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), x: parseInt(e.target.value) })}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
+
+                <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                  <div className="flex justify-between text-[10px] text-slate-400 mb-2 font-bold uppercase">
+                    <span>Move Y</span>
+                    <span className="text-indigo-400">{(card.imagePosition?.y || 0)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    value={card.imagePosition?.y || 0}
+                    onChange={(e) => handleChange('imagePosition', { ...(card.imagePosition || { x: 0, y: 0 }), y: parseInt(e.target.value) })}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowCropModal(false)}
+              className="w-full bg-bone-500 hover:bg-bone-400 text-slate-950 font-black tracking-wide uppercase text-sm py-4 rounded-xl transition-all shadow-lg active:scale-95"
+            >
+              Apply Changes
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

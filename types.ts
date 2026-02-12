@@ -39,6 +39,7 @@ export interface CardData {
   socialLink: string;
   country: string; // 2 letter code preferably
   consent: boolean;
+  decisionConsent: boolean;
   namePosition: CardPosition;
   statsPosition: CardPosition;
   dogTricksPermission: boolean;
@@ -47,6 +48,7 @@ export interface CardData {
   dogTricks: string; // List of dog tricks if under 50 bones
   imageZoom?: number;
   imagePosition?: { x: number; y: number };
+  socialPlatform?: 'instagram' | 'other';
 }
 
 export interface AIServiceResponse {

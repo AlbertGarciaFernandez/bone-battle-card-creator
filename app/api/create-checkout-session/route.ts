@@ -1,12 +1,11 @@
 import Stripe from 'stripe';
 import { NextResponse } from 'next/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2026-01-28.clover' as any, // Using the version requested by the system/types
-});
-
 export async function POST(req: Request) {
     try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+            apiVersion: '2026-01-28.clover' as any,
+        });
         const { priceId, successUrl, cancelUrl, metadata } = await req.json();
 
         if (!priceId) {
