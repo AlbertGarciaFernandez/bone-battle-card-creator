@@ -1118,10 +1118,10 @@ const CardForm: React.FC<CardFormProps> = ({
 
       {/* Crop Modal for Mobile */}
       {showCropModal && (
-        <div className="fixed inset-x-0 bottom-0 z-[100] flex flex-col justify-end pointer-events-none">
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/60 transition-opacity pointer-events-auto" onClick={() => setShowCropModal(false)} />
 
-          <div className="relative bg-slate-900/90 backdrop-blur-xl border-t border-slate-700 rounded-t-2xl px-4 pt-4 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] space-y-3 pointer-events-auto pb-safe">
+          <div className="relative w-full max-w-full overflow-hidden bg-slate-900/90 backdrop-blur-xl border-t border-slate-700 rounded-t-2xl px-4 pt-4 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] space-y-3 pointer-events-auto pb-safe box-border">
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <h3 className="text-sm font-bold text-bone-100 flex items-center gap-2">
                 <ImageIcon size={16} className="text-bone-400" />

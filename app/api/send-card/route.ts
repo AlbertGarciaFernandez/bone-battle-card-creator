@@ -5,51 +5,44 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
     try {
-        const { card, imageData, cardText, originalImage } = await req.json();
+        const { card, imageData, cardText, cardCapture } = await req.json();
 
         if (!card || !imageData) {
             return NextResponse.json({ error: 'Missing card data or image data' }, { status: 400 });
         }
 
-        // Prepare attachments
+        // Helper to extract base64 content from a data URL
+        const extractBase64 = (dataUrl: string) => {
+            const matches = dataUrl.match(/^data:image\/([a-z]+);base64,(.+)$/);
+            if (matches) return { ext: matches[1] === 'jpeg' ? 'jpg' : matches[1], content: matches[2] };
+            return { ext: 'jpg', content: dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl };
+        };
+
+        const safeName = card.name.replace(/\s+/g, '_');
         const attachments: any[] = [];
 
-        // 1. Captured Card Image
-        const cardMatches = imageData.match(/^data:image\/([a-z]+);base64,(.+)$/);
-        if (cardMatches) {
-            attachments.push({
-                filename: `${card.name.replace(/\s+/g, '_')}_card.${cardMatches[1] === 'jpeg' ? 'jpg' : cardMatches[1]}`,
-                content: cardMatches[2],
-            });
-        } else {
-            attachments.push({
-                filename: `${card.name.replace(/\s+/g, '_')}_card.png`,
-                content: imageData.includes(',') ? imageData.split(',')[1] : imageData,
-            });
-        }
+        // 1. Original uploaded image (imageData is now always the user's photo)
+        const img = extractBase64(imageData);
+        attachments.push({
+            filename: `${safeName}_original.${img.ext}`,
+            content: img.content,
+        });
 
         // 2. Data Text File
         if (cardText) {
             attachments.push({
-                filename: `${card.name.replace(/\s+/g, '_')}_data.txt`,
+                filename: `${safeName}_data.txt`,
                 content: Buffer.from(cardText).toString('base64'),
             });
         }
 
-        // 3. Original Uploaded Image (skip if same as card image to avoid duplicates)
-        if (originalImage && originalImage !== imageData) {
-            const originalMatches = originalImage.match(/^data:image\/([a-z]+);base64,(.+)$/);
-            if (originalMatches) {
-                attachments.push({
-                    filename: `${card.name.replace(/\s+/g, '_')}_original.${originalMatches[1] === 'jpeg' ? 'jpg' : originalMatches[1]}`,
-                    content: originalMatches[2],
-                });
-            } else if (!originalImage.startsWith('http')) {
-                attachments.push({
-                    filename: `${card.name.replace(/\s+/g, '_')}_original.jpg`,
-                    content: originalImage,
-                });
-            }
+        // 3. Card capture screenshot (optional — may not be available on mobile)
+        if (cardCapture) {
+            const cap = extractBase64(cardCapture);
+            attachments.push({
+                filename: `${safeName}_card.${cap.ext}`,
+                content: cap.content,
+            });
         }
 
         // Prepare email content
@@ -76,9 +69,9 @@ export async function POST(req: Request) {
           
           <p style="margin-top: 20px;">Attached:</p>
           <ul>
-            <li>Generated Card Image</li> 
-            <li>Data Text File</li>
             <li>Original Uploaded Image</li>
+            <li>Data Text File</li>
+            ${cardCapture ? '<li>Card Preview Screenshot</li>' : '<li><em>Card screenshot not available (mobile submission)</em></li>'}
           </ul>
         </div>
       `,

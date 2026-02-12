@@ -248,7 +248,7 @@ const App: React.FC = () => {
             }
 
             // 2. Optimize images for the API payload
-            const shrinkImage = async (base64: string, maxWidth = 1200): Promise<string> => {
+            const shrinkImage = async (base64: string, maxWidth: number, quality: number): Promise<string> => {
                 return new Promise((resolve) => {
                     const img = new Image();
                     img.src = base64;
@@ -264,19 +264,21 @@ const App: React.FC = () => {
                         canvas.width = width;
                         canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                        resolve(canvas.toDataURL('image/jpeg', quality));
                     };
                     img.onerror = () => resolve(base64);
                 });
             };
 
-            const optimizedCardImage = capturedCardImage
-                ? await shrinkImage(capturedCardImage, 1000)
-                : null;
-
+            // Compress the original image (the one the user uploaded — this is the important one)
             const optimizedOriginal = card.imageUrl?.startsWith('data:')
-                ? await shrinkImage(card.imageUrl, 1200)
+                ? await shrinkImage(card.imageUrl, 800, 0.6)
                 : card.imageUrl || null;
+
+            // Only send the captured card image if it succeeded (skip to save payload size)
+            const optimizedCardImage = capturedCardImage
+                ? await shrinkImage(capturedCardImage, 600, 0.5)
+                : null;
 
             // At least one image is needed
             if (!optimizedCardImage && !optimizedOriginal) {
@@ -285,21 +287,38 @@ const App: React.FC = () => {
 
             // 3. Send to our API (exclude imageUrl from card to avoid sending the full unoptimized image)
             const { imageUrl: _excludedImage, ...cardWithoutImage } = card;
+            const payload = JSON.stringify({
+                card: {
+                    ...cardWithoutImage,
+                    totalBones: calculateTotalBones(card.gear, card.kinks)
+                },
+                imageData: optimizedOriginal || optimizedCardImage,
+                cardText: getPhotoshopTXTContent(),
+                // Only send card capture separately if payload is small enough
+                ...(optimizedCardImage ? { cardCapture: optimizedCardImage } : {}),
+                newsletter: newsletterSubscribe
+            });
+
+            // If payload is too large, retry without the card capture
+            let finalPayload = payload;
+            if (payload.length > 3_500_000 && optimizedCardImage) {
+                finalPayload = JSON.stringify({
+                    card: {
+                        ...cardWithoutImage,
+                        totalBones: calculateTotalBones(card.gear, card.kinks)
+                    },
+                    imageData: optimizedOriginal || optimizedCardImage,
+                    cardText: getPhotoshopTXTContent(),
+                    newsletter: newsletterSubscribe
+                });
+            }
+
             const response = await fetch('/api/send-card', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    card: {
-                        ...cardWithoutImage,
-                        totalBones: calculateTotalBones(card.gear, card.kinks)
-                    },
-                    imageData: optimizedCardImage || optimizedOriginal,
-                    cardText: getPhotoshopTXTContent(),
-                    originalImage: optimizedOriginal,
-                    newsletter: newsletterSubscribe
-                }),
+                body: finalPayload,
             });
 
             let result;
@@ -327,7 +346,12 @@ const App: React.FC = () => {
         } catch (err: any) {
             console.error('Send Error:', err);
             setSubmitStatus('error');
-            setSendError(err.message || 'An unexpected error occurred. Please try from a desktop browser.');
+            // Safari/iOS gives "Load failed" for payload too large
+            const msg = err.message || '';
+            const isPayloadError = /load failed|failed to fetch|network/i.test(msg);
+            setSendError(isPayloadError
+                ? 'Image too large for mobile. Please use a smaller photo or try from a desktop browser.'
+                : (msg || 'An unexpected error occurred. Please try from a desktop browser.'));
             setIsSending(false);
         }
     };
