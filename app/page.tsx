@@ -208,6 +208,43 @@ const App: React.FC = () => {
         setShowSendModal(true);
     };
 
+    // Helper: convert a base64 data URL to a Blob (binary — 33% smaller than base64 string)
+    const dataURLtoBlob = (dataUrl: string): Blob => {
+        const [header, base64] = dataUrl.split(',');
+        const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return new Blob([bytes], { type: mime });
+    };
+
+    // Helper: resize an image via canvas and return as Blob
+    const compressToBlob = (base64: string, maxWidth: number, quality: number): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = base64;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return resolve(dataURLtoBlob(base64));
+
+                const ratio = img.width / img.height;
+                const width = Math.min(img.width, maxWidth);
+                const height = width / ratio;
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(
+                    (blob) => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')),
+                    'image/jpeg',
+                    quality
+                );
+            };
+            img.onerror = () => reject(new Error('Image load failed'));
+        });
+    };
+
     // Step 2: Actually Send
     const handleFinalizeSend = async () => {
         setIsSending(true);
@@ -228,11 +265,8 @@ const App: React.FC = () => {
                     capturedCardImage = await htmlToImage.toPng(node, {
                         quality: 0.95,
                         backgroundColor: '#000000',
-                        cacheBust: false, // cacheBust breaks CORS for external images (flags) on mobile
-                        style: {
-                            borderRadius: '0',
-                            margin: '0',
-                        },
+                        cacheBust: false,
+                        style: { borderRadius: '0', margin: '0' },
                     });
 
                     // Try to download the captured image (may not work on mobile)
@@ -247,85 +281,46 @@ const App: React.FC = () => {
                 }
             }
 
-            // 2. Optimize images for the API payload
-            const shrinkImage = async (base64: string, maxWidth: number, quality: number): Promise<string> => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.src = base64;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        if (!ctx) return resolve(base64);
-
-                        const ratio = img.width / img.height;
-                        const width = Math.min(img.width, maxWidth);
-                        const height = width / ratio;
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', quality));
-                    };
-                    img.onerror = () => resolve(base64);
-                });
-            };
-
-            // Compress the original image (the one the user uploaded — this is the important one)
-            const optimizedOriginal = card.imageUrl?.startsWith('data:')
-                ? await shrinkImage(card.imageUrl, 800, 0.6)
-                : card.imageUrl || null;
-
-            // Only send the captured card image if it succeeded (skip to save payload size)
-            const optimizedCardImage = capturedCardImage
-                ? await shrinkImage(capturedCardImage, 600, 0.5)
+            // 2. Compress images to binary Blobs (much smaller than base64 in JSON)
+            const originalBlob = card.imageUrl?.startsWith('data:')
+                ? await compressToBlob(card.imageUrl, 1200, 0.8)
                 : null;
 
-            // At least one image is needed
-            if (!optimizedCardImage && !optimizedOriginal) {
+            const cardCaptureBlob = capturedCardImage
+                ? await compressToBlob(capturedCardImage, 1000, 0.8)
+                : null;
+
+            if (!originalBlob && !cardCaptureBlob) {
                 throw new Error('Could not process any images. Please try again or use a different browser.');
             }
 
-            // 3. Send to our API (exclude imageUrl from card to avoid sending the full unoptimized image)
+            // 3. Build FormData (binary upload — no base64 overhead)
             const { imageUrl: _excludedImage, ...cardWithoutImage } = card;
-            const payload = JSON.stringify({
-                card: {
-                    ...cardWithoutImage,
-                    totalBones: calculateTotalBones(card.gear, card.kinks)
-                },
-                imageData: optimizedOriginal || optimizedCardImage,
-                cardText: getPhotoshopTXTContent(),
-                // Only send card capture separately if payload is small enough
-                ...(optimizedCardImage ? { cardCapture: optimizedCardImage } : {}),
-                newsletter: newsletterSubscribe
-            });
+            const formData = new FormData();
+            formData.append('card', JSON.stringify({
+                ...cardWithoutImage,
+                totalBones: calculateTotalBones(card.gear, card.kinks),
+                newsletter: newsletterSubscribe,
+            }));
+            formData.append('cardText', getPhotoshopTXTContent());
 
-            // If payload is too large, retry without the card capture
-            let finalPayload = payload;
-            if (payload.length > 3_500_000 && optimizedCardImage) {
-                finalPayload = JSON.stringify({
-                    card: {
-                        ...cardWithoutImage,
-                        totalBones: calculateTotalBones(card.gear, card.kinks)
-                    },
-                    imageData: optimizedOriginal || optimizedCardImage,
-                    cardText: getPhotoshopTXTContent(),
-                    newsletter: newsletterSubscribe
-                });
+            if (originalBlob) {
+                formData.append('originalImage', originalBlob, `${card.name.replace(/\s+/g, '_')}_original.jpg`);
+            }
+            if (cardCaptureBlob) {
+                formData.append('cardCapture', cardCaptureBlob, `${card.name.replace(/\s+/g, '_')}_card.jpg`);
             }
 
             const response = await fetch('/api/send-card', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: finalPayload,
+                body: formData, // No Content-Type header — browser sets it with boundary
             });
 
             let result;
             try {
                 result = await response.json();
             } catch {
-                throw new Error(`Server error (${response.status}). The request may be too large — try using a smaller image.`);
+                throw new Error(`Server error (${response.status}). Please try again.`);
             }
 
             if (!response.ok) {
@@ -338,7 +333,7 @@ const App: React.FC = () => {
             setTimeout(() => {
                 setShowSendModal(false);
                 setShowSupportModal(true);
-                setSubmitStatus('idle'); // Reset for next time
+                setSubmitStatus('idle');
             }, 1500);
 
             setIsSending(false);
@@ -346,12 +341,7 @@ const App: React.FC = () => {
         } catch (err: any) {
             console.error('Send Error:', err);
             setSubmitStatus('error');
-            // Safari/iOS gives "Load failed" for payload too large
-            const msg = err.message || '';
-            const isPayloadError = /load failed|failed to fetch|network/i.test(msg);
-            setSendError(isPayloadError
-                ? 'Image too large for mobile. Please use a smaller photo or try from a desktop browser.'
-                : (msg || 'An unexpected error occurred. Please try from a desktop browser.'));
+            setSendError(err.message || 'An unexpected error occurred. Please try again.');
             setIsSending(false);
         }
     };
