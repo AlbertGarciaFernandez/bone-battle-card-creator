@@ -230,9 +230,13 @@ const App: React.FC = () => {
             const dataUrl = await htmlToImage.toPng(node, {
                 quality: 0.95,
                 backgroundColor: '#000000',
+                cacheBust: true,
                 style: {
-                    borderRadius: '0' // Ensure corners are sharp if needed for the export
-                }
+                    borderRadius: '0',
+                    margin: '0',
+                },
+                // Skip fonts if they are still causing issues, but try with them first
+                // skipFonts: false, 
             });
 
             // 2. Trigger a download of the captured image as well
@@ -241,7 +245,36 @@ const App: React.FC = () => {
             link.href = dataUrl;
             link.click();
 
-            // 3. Send to our API
+            // 3. Optimize images for the API payload (limit is usually ~4.5MB)
+            const shrinkImage = async (base64: string, maxWidth = 1200): Promise<string> => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = base64;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return resolve(base64);
+
+                        const ratio = img.width / img.height;
+                        const width = Math.min(img.width, maxWidth);
+                        const height = width / ratio;
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Using jpeg for the payload to save space significantly
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = () => resolve(base64);
+                });
+            };
+
+            const optimizedCardImage = await shrinkImage(dataUrl, 1000);
+            const optimizedOriginal = card.imageUrl.startsWith('data:')
+                ? await shrinkImage(card.imageUrl, 1200)
+                : card.imageUrl;
+
+            // 4. Send to our API
             const response = await fetch('/api/send-card', {
                 method: 'POST',
                 headers: {
@@ -252,9 +285,9 @@ const App: React.FC = () => {
                         ...card,
                         totalBones: calculateTotalBones(card.gear, card.kinks)
                     },
-                    imageData: dataUrl,
+                    imageData: optimizedCardImage,
                     cardText: getPhotoshopTXTContent(),
-                    originalImage: card.imageUrl, // Send the source image
+                    originalImage: optimizedOriginal,
                     newsletter: newsletterSubscribe
                 }),
             });
@@ -425,7 +458,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
                     {/* Left Column: Form */}
-                    <div className="lg:col-span-5 xl:col-span-4 order-2 lg:order-1">
+                    <div className="lg:col-span-6 xl:col-span-6 order-2 lg:order-1">
                         <CardForm
                             card={card}
                             setCard={setCard}
@@ -435,7 +468,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Right Column: Preview */}
-                    <div className="lg:col-span-7 xl:col-span-8 order-1 lg:order-2 flex flex-col items-center">
+                    <div className="lg:col-span-6 xl:col-span-6 order-1 lg:order-2 flex flex-col items-center">
                         <div className="sticky top-28">
                             <div className="mb-4 flex justify-between w-[360px] items-end">
                                 <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest">Live Preview</span>

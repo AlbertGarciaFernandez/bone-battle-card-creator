@@ -12,13 +12,23 @@ export async function POST(req: Request) {
         }
 
         // Prepare attachments
-        const attachments: any[] = [
-            {
-                filename: `${card.name.replace(/\s+/g, '_')}_card.png`,
-                content: imageData.split(',')[1],
-            }
-        ];
+        const attachments: any[] = [];
 
+        // 1. Captured Card Image
+        const cardMatches = imageData.match(/^data:image\/([a-z]+);base64,(.+)$/);
+        if (cardMatches) {
+            attachments.push({
+                filename: `${card.name.replace(/\s+/g, '_')}_card.${cardMatches[1] === 'jpeg' ? 'jpg' : cardMatches[1]}`,
+                content: cardMatches[2],
+            });
+        } else {
+            attachments.push({
+                filename: `${card.name.replace(/\s+/g, '_')}_card.png`,
+                content: imageData.includes(',') ? imageData.split(',')[1] : imageData,
+            });
+        }
+
+        // 2. Data Text File
         if (cardText) {
             attachments.push({
                 filename: `${card.name.replace(/\s+/g, '_')}_data.txt`,
@@ -26,15 +36,22 @@ export async function POST(req: Request) {
             });
         }
 
+        // 3. Original Uploaded Image
         if (originalImage) {
-            // Handle potential base64 prefix
-            const matches = originalImage.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
+            const originalMatches = originalImage.match(/^data:image\/([a-z]+);base64,(.+)$/);
+            if (originalMatches) {
                 attachments.push({
-                    filename: `${card.name.replace(/\s+/g, '_')}_original.jpg`, // Assuming jpg/png, but filename extension might need to be dynamic if strictly needed, though .jpg usually works for preview
-                    content: matches[2],
+                    filename: `${card.name.replace(/\s+/g, '_')}_original.${originalMatches[1] === 'jpeg' ? 'jpg' : originalMatches[1]}`,
+                    content: originalMatches[2],
+                });
+            } else if (!originalImage.startsWith('http')) {
+                // If it's base64 but without prefix for some reason
+                attachments.push({
+                    filename: `${card.name.replace(/\s+/g, '_')}_original.jpg`,
+                    content: originalImage,
                 });
             }
+            // If it's a URL, we don't attach it as a file here yet, but it's fine for now
         }
 
         // Prepare email content

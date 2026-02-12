@@ -161,6 +161,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
             <img
               src={`https://flagcdn.com/w80/${country.toLowerCase()}.png`}
               alt={country}
+              crossOrigin="anonymous"
               className="h-8 object-cover border-2 border-white shadow-md rounded-tl-lg"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />

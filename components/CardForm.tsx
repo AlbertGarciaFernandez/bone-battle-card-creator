@@ -374,6 +374,7 @@ const CardForm: React.FC<CardFormProps> = ({
 
   // Height Conversion Logic
   const updateHeightFromCm = (val: string) => {
+    if (val.length > 5) return;
     setCm(val);
     const numM = parseFloat(val);
     if (!isNaN(numM) && numM > 0) {
@@ -391,6 +392,7 @@ const CardForm: React.FC<CardFormProps> = ({
   };
 
   const updateHeightFromFtIn = (f: string, i: string) => {
+    if (f.length > 2 || i.length > 2) return;
     setFt(f);
     setInch(i);
     const numF = parseFloat(f) || 0;
@@ -409,6 +411,7 @@ const CardForm: React.FC<CardFormProps> = ({
 
   // Shoe Conversion Logic (Revised: EU = 32.7 + 1.27 * US)
   const updateShoeFromEu = (val: string) => {
+    if (val.length > 5) return;
     setEuShoe(val);
     const numEu = parseFloat(val);
     if (!isNaN(numEu) && numEu > 30) {
@@ -424,6 +427,7 @@ const CardForm: React.FC<CardFormProps> = ({
   };
 
   const updateShoeFromUs = (val: string) => {
+    if (val.length > 5) return;
     setUsShoe(val);
     const numUs = parseFloat(val);
     if (!isNaN(numUs) && numUs > 0) {
@@ -460,16 +464,28 @@ const CardForm: React.FC<CardFormProps> = ({
     }
   };
 
-  const renderInfoPanel = () => {
+  const renderInfoPanel = (filter?: string[]) => {
     if (!activeInfo) return null;
+    // If a filter is provided, only show if activeInfo is in that list
+    if (filter && !filter.includes(activeInfo)) return null;
+
     return (
-      <div className="md:col-span-2 mt-4 min-h-[80px] relative">
-        <div className="p-4 rounded-lg border transition-all duration-300 bg-slate-950/80 border-bone-500/30 animate-in fade-in slide-in-from-bottom-1">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-bone-400 animate-pulse" />
-            <span className="text-xs font-black text-bone-200 uppercase tracking-widest">{activeInfo}</span>
+      <div className="mt-3 mb-4 relative z-10">
+        <div className="p-3 rounded-lg border transition-all duration-300 bg-slate-950/90 border-bone-500/40 shadow-xl shadow-black/50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-bone-400 animate-pulse" />
+              <span className="text-xs font-black text-white uppercase tracking-widest">{activeInfo}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveInfo(null)}
+              className="text-slate-500 hover:text-white transition-colors p-1"
+            >
+              <X size={14} />
+            </button>
           </div>
-          <p className="text-[11px] text-slate-300 leading-relaxed italic">
+          <p className="text-[10px] text-slate-300 leading-relaxed italic border-l-2 border-bone-500/20 pl-2">
             {KINK_DESCRIPTIONS[activeInfo] || GEAR_DESCRIPTIONS[activeInfo]}
           </p>
         </div>
@@ -500,7 +516,7 @@ const CardForm: React.FC<CardFormProps> = ({
                 required
                 minLength={2}
                 maxLength={20}
-                className={`w-full bg-slate-900 border rounded-md px-3 py-3 text-base text-bone-50 focus:border-bone-400 focus:outline-none ${!card.name ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
+                className={`w-full bg-slate-900 border rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-bone-50 focus:border-bone-400 focus:outline-none ${!card.name ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                   }`}
                 placeholder="Enter pup name (e.g. Rex)"
               />
@@ -517,7 +533,7 @@ const CardForm: React.FC<CardFormProps> = ({
                 value={card.hoodColor}
                 onChange={(e) => handleChange('hoodColor', e.target.value)}
                 required
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-3 text-base text-bone-50 focus:border-bone-400 focus:outline-none"
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 sm:py-1.5 py-3 sm:text-xs text-base text-bone-50 focus:border-bone-400 focus:outline-none"
               >
                 {Object.values(HoodColor).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -627,14 +643,14 @@ const CardForm: React.FC<CardFormProps> = ({
                       value={card.imageUrl || ''}
                       onChange={(e) => handleChange('imageUrl', e.target.value)}
                       required
-                      className={`w-full bg-slate-950 border rounded-lg px-4 py-3 text-sm text-white focus:border-bone-400 focus:ring-1 focus:ring-bone-400/20 outline-none transition-all ${!card.imageUrl ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
+                      className={`w-full bg-slate-950 border rounded-lg px-4 sm:py-1.5 py-3 sm:text-xs text-sm text-white focus:border-bone-400 focus:ring-1 focus:ring-bone-400/20 outline-none transition-all ${!card.imageUrl ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                         }`}
                     />
                     {!card.imageUrl && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Please upload or paste an image</p>}
                   </div>
                   <div className="flex gap-2">
-                    <label className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-bone-200 px-5 py-3 rounded-lg cursor-pointer border border-slate-600 flex items-center justify-center gap-2 transition-all active:scale-95 group" title="Upload Image">
-                      <Upload size={18} className="group-hover:translate-y-[-1px] transition-transform" />
+                    <label className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-bone-200 sm:px-3 px-5 sm:py-1.5 py-3 rounded-lg cursor-pointer border border-slate-600 flex items-center justify-center gap-2 transition-all active:scale-95 group" title="Upload Image">
+                      <Upload size={16} className="group-hover:translate-y-[-1px] transition-transform" />
                       <span className="text-xs font-bold uppercase tracking-tight sm:hidden">Upload</span>
                       <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </label>
@@ -691,7 +707,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     value={cm}
                     onChange={(e) => updateHeightFromCm(e.target.value)}
                     required
-                    className={`flex-1 bg-slate-950 border rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none ${!cm || parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
+                    className={`flex-1 bg-slate-950 border rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none ${!cm || parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
                   />
                   {!cm && <p className="text-[10px] text-red-500 mt-1 font-bold absolute -bottom-4">Required</p>}
                   <span className="text-sm text-slate-500">m</span>
@@ -710,7 +726,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="8"
                     value={ft}
                     onChange={(e) => updateHeightFromFtIn(e.target.value, inch)}
-                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none"
+                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 sm:py-2 py-3 sm:text-sm text-base text-white focus:border-bone-400 outline-none"
                   />
                   <span className="text-sm text-slate-500">ft</span>
                   <input
@@ -720,7 +736,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="11"
                     value={inch}
                     onChange={(e) => updateHeightFromFtIn(ft, e.target.value)}
-                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none"
+                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 sm:py-2 py-3 sm:text-sm text-base text-white focus:border-bone-400 outline-none"
                   />
                   <span className="text-sm text-slate-500">in</span>
                 </div>
@@ -742,7 +758,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     value={euShoe}
                     onChange={(e) => updateShoeFromEu(e.target.value)}
                     required
-                    className={`flex-1 bg-slate-950 border rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none ${!euShoe || parseFloat(euShoe) < 35 || parseFloat(euShoe) > 50 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
+                    className={`flex-1 bg-slate-950 border rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none ${!euShoe || parseFloat(euShoe) < 35 || parseFloat(euShoe) > 50 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
                   />
                   {!euShoe && <p className="text-[10px] text-red-500 mt-1 font-bold absolute -bottom-4">Required</p>}
                   <span className="text-sm text-slate-500">EU</span>
@@ -761,7 +777,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="16"
                     value={usShoe}
                     onChange={(e) => updateShoeFromUs(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-3 text-base text-white focus:border-bone-400 outline-none"
+                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none"
                   />
                   <span className="text-sm text-slate-500">US</span>
                 </div>
@@ -876,7 +892,7 @@ const CardForm: React.FC<CardFormProps> = ({
                 value={card.socialLink}
                 onChange={(e) => handleChange('socialLink', e.target.value)}
                 required
-                className={`w-full bg-slate-900 border rounded-md px-3 py-3 text-base text-white focus:border-bone-400 focus:outline-none ${!card.socialLink ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
+                className={`w-full bg-slate-900 border rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 focus:outline-none ${!card.socialLink ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                   }`}
               />
               {!card.socialLink && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required field</p>}
@@ -898,149 +914,112 @@ const CardForm: React.FC<CardFormProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            {/* Unified Grid: 2 columns to ensure fit */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* Gear Column */}
-            <div className="space-y-1.5">
-              <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1">Gear</h5>
-              {[...GEAR_CATEGORIES].slice(0, 4).map(item => (
-                <div key={item} className="grid items-center justify-between gap-1.5 group relative">
-                  <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      className="focus:outline-none p-1 -m-1"
-                    >
-                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
-                    </button>
-                  </div>
-                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
-                    {[0, 1, 2, 3, 4, 5].map(v => (
-                      <button
-                        key={v}
-                        onClick={() => handleMatrixChange('gear', item, v)}
-                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.gear[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
-                          }`}
-                      >
-                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
+              {/* GEAR GROUP A */}
+              <div className="space-y-1.5">
+                <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1">Gear Group A</h5>
+                {[...GEAR_CATEGORIES].slice(0, 4).map(item => (
+                  <div key={item} className="flex items-center justify-between gap-1.5 group relative">
+                    <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
+                      <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
+                      <button type="button" onClick={() => setActiveInfo(activeInfo === item ? null : item)} className="focus:outline-none p-1 -m-1">
+                        <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300`} />
                       </button>
-                    ))}
+                    </div>
+                    <div className="flex gap-1 bg-slate-800/30 rounded p-1 flex-shrink-0">
+                      {[0, 1, 2, 3, 4, 5].map(v => (
+                        <button key={v} onClick={() => handleMatrixChange('gear', item, v)} className={`w-7 h-7 sm:w-5 sm:h-5 rounded flex items-center justify-center border border-transparent ${(card.gear[item] || 0) >= v && v > 0 ? 'bg-bone-200 text-slate-900 border-bone-100' : 'text-slate-600 bg-slate-900/50'}`}>
+                          {v === 0 ? <span className="text-[10px] font-bold">x</span> : <Bone size={10} className="fill-current" />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+                <div className="md:hidden">{renderInfoPanel([...GEAR_CATEGORIES].slice(0, 4))}</div>
+              </div>
+
+              {/* GEAR GROUP B */}
+              <div className="space-y-1.5">
+                <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1">Gear Group B</h5>
+                {[...GEAR_CATEGORIES].slice(4).map(item => (
+                  <div key={item} className="flex items-center justify-between gap-1.5 group relative">
+                    <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
+                      <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
+                      <button type="button" onClick={() => setActiveInfo(activeInfo === item ? null : item)} className="focus:outline-none p-1 -m-1">
+                        <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300`} />
+                      </button>
+                    </div>
+                    <div className="flex gap-1 bg-slate-800/30 rounded p-1 flex-shrink-0">
+                      {[0, 1, 2, 3, 4, 5].map(v => (
+                        <button key={v} onClick={() => handleMatrixChange('gear', item, v)} className={`w-7 h-7 sm:w-5 sm:h-5 rounded flex items-center justify-center border border-transparent ${(card.gear[item] || 0) >= v && v > 0 ? 'bg-bone-200 text-slate-900 border-bone-100' : 'text-slate-600 bg-slate-900/50'}`}>
+                          {v === 0 ? <span className="text-[10px] font-bold">x</span> : <Bone size={10} className="fill-current" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="md:hidden">{renderInfoPanel([...GEAR_CATEGORIES].slice(4))}</div>
+              </div>
+
+              {/* INTO GROUP A */}
+              <div className="space-y-1.5">
+                <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1">Into Group A</h5>
+                {[...KINKS_CATEGORIES].slice(0, 6).map(item => (
+                  <div key={item} className="flex items-center justify-between gap-1.5 group relative">
+                    <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
+                      <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
+                      <button type="button" onClick={() => setActiveInfo(activeInfo === item ? null : item)} className="focus:outline-none p-1 -m-1">
+                        <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300`} />
+                      </button>
+                    </div>
+                    <div className="flex gap-1 bg-slate-800/30 rounded p-1 flex-shrink-0">
+                      {[0, 1, 2, 3, 4, 5].map(v => (
+                        <button key={v} onClick={() => handleMatrixChange('kinks', item, v)} className={`w-7 h-7 sm:w-5 sm:h-5 rounded flex items-center justify-center border border-transparent ${(card.kinks[item] || 0) >= v && v > 0 ? 'bg-bone-200 text-slate-900 border-bone-100' : 'text-slate-600 bg-slate-900/50'}`}>
+                          {v === 0 ? <span className="text-[10px] font-bold">x</span> : <Bone size={10} className="fill-current" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="md:hidden">{renderInfoPanel([...KINKS_CATEGORIES].slice(0, 6))}</div>
+              </div>
+
+              {/* INTO GROUP B */}
+              <div className="space-y-1.5">
+                <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1">Into Group B</h5>
+                {[...KINKS_CATEGORIES].slice(6).map(item => (
+                  <div key={item} className="flex items-center justify-between gap-1.5 group relative">
+                    <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
+                      <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
+                      <button type="button" onClick={() => setActiveInfo(activeInfo === item ? null : item)} className="focus:outline-none p-1 -m-1">
+                        <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300`} />
+                      </button>
+                    </div>
+                    <div className="flex gap-1 bg-slate-800/30 rounded p-1 flex-shrink-0">
+                      {[0, 1, 2, 3, 4, 5].map(v => (
+                        <button key={v} onClick={() => handleMatrixChange('kinks', item, v)} className={`w-7 h-7 sm:w-5 sm:h-5 rounded flex items-center justify-center border border-transparent ${(card.kinks[item] || 0) >= v && v > 0 ? 'bg-bone-200 text-slate-900 border-bone-100' : 'text-slate-600 bg-slate-900/50'}`}>
+                          {v === 0 ? <span className="text-[10px] font-bold">x</span> : <Bone size={10} className="fill-current" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="md:hidden">{renderInfoPanel([...KINKS_CATEGORIES].slice(6))}</div>
+              </div>
+
             </div>
 
-            {renderInfoPanel()}
-
-            {/* Gear Right Column */}
-            <div className="space-y-1.5">
-              <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1 opacity-0">Gear</h5>
-              {[...GEAR_CATEGORIES].slice(4).map(item => (
-                <div key={item} className="grid items-center justify-between gap-1.5 group relative">
-                  <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      className="focus:outline-none p-1 -m-1"
-                    >
-                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
-                    </button>
-                  </div>
-                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
-                    {[0, 1, 2, 3, 4, 5].map(v => (
-                      <button
-                        key={v}
-                        onClick={() => handleMatrixChange('gear', item, v)}
-                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.gear[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
-                          }`}
-                      >
-                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Kinks Column */}
-            <div className="space-y-1.5">
-              <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1">Into</h5>
-              {[...KINKS_CATEGORIES].slice(0, 6).map(item => (
-                <div key={item} className="grid items-center justify-between gap-1.5 group relative">
-                  <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      className="focus:outline-none p-1 -m-1"
-                    >
-                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
-                    </button>
-                  </div>
-                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
-                    {[0, 1, 2, 3, 4, 5].map(v => (
-                      <button
-                        key={v}
-                        onClick={() => handleMatrixChange('kinks', item, v)}
-                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.kinks[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
-                          }`}
-                      >
-                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {renderInfoPanel()}
-
-            {/* Kinks Right Column */}
-            <div className="space-y-1.5">
-              <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-1 opacity-0">Into</h5>
-              {[...KINKS_CATEGORIES].slice(6).map(item => (
-                <div key={item} className="grid items-center justify-between gap-1.5 group relative">
-                  <div className="flex items-center gap-1 flex-shrink-0" style={{ maxWidth: '85px' }}>
-                    <span className="text-[11px] text-slate-400 truncate font-semibold">{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveInfo(activeInfo === item ? null : item)}
-                      className="focus:outline-none p-1 -m-1"
-                    >
-                      <Info size={14} className={`${activeInfo === item ? 'text-bone-300' : 'text-slate-600'} cursor-help hover:text-slate-300 transition-colors`} />
-                    </button>
-                  </div>
-                  <div className="flex gap-1 bg-slate-800/50 rounded p-1 flex-shrink-0 flex-wrap sm:flex-nowrap">
-                    {[0, 1, 2, 3, 4, 5].map(v => (
-                      <button
-                        key={v}
-                        onClick={() => handleMatrixChange('kinks', item, v)}
-                        className={`w-7 h-7 sm:w-[22px] sm:h-[22px] rounded flex items-center justify-center transition-all border border-transparent ${(card.kinks[item] || 0) >= v && v > 0
-                          ? 'bg-bone-200 text-slate-900 shadow-sm border-bone-100'
-                          : 'text-slate-600 hover:bg-slate-700 hover:text-slate-400 bg-slate-900/50'
-                          }`}
-                      >
-                        {v === 0 ? <span className="text-[10px] text-slate-500 font-bold">x</span> : <Bone size={12} className="fill-current" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            {/* Desktop Info Panel: Spans all columns */}
+            <div className="hidden md:block">
+              {renderInfoPanel([...GEAR_CATEGORIES, ...KINKS_CATEGORIES])}
             </div>
           </div>
 
-          {/* Dedicated Info Panel rendered inside columns logic now, but keeping this as backup for hover if needed or removing if replaced */}
-          {/* We'll use a local helper to render it between columns */}
-
           {/* Breakdown Summary inside Bone Values container */}
+
           <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-wrap items-center justify-end gap-4">
             <div className={`px-4 py-2 rounded-lg border flex items-center gap-3 shadow-inner transition-colors ${isOverLimit ? 'bg-red-900/20 border-red-500/50 text-red-200 shadow-red-900/40' : 'bg-slate-950/50 border-slate-600 text-bone-100 shadow-black'
               }`}>
