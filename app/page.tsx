@@ -265,18 +265,28 @@ const App: React.FC = () => {
         try { handleExportPhotoshopTXT(); } catch (e) { console.warn('TXT download skipped:', e); }
 
         try {
-            // 1. Try to capture the card as an image (may fail on mobile)
+            // 1. Try to capture the card as an image (may fail on mobile memory limits)
             let capturedCardImage: string | null = null;
             const node = document.getElementById('card-preview-container');
 
             if (node) {
+                // Wait for layout stability
                 await new Promise(resolve => setTimeout(resolve, 100));
+
                 try {
+                    // Optimized capture settings for Mobile Safari stability
                     capturedCardImage = await htmlToImage.toPng(node, {
                         quality: 0.95,
                         backgroundColor: '#000000',
-                        cacheBust: false,
-                        style: { borderRadius: '0', margin: '0' },
+                        cacheBust: true, // Force fresh render
+                        pixelRatio: 1,   // FORCE 1x resolution to save memory on mobile (Retina screens explode canvas size otherwise)
+                        width: 360,      // Explicit width to match container
+                        style: {
+                            transform: 'scale(1)',
+                            transformOrigin: 'top left',
+                            borderRadius: '0',
+                            margin: '0'
+                        },
                     });
 
                     // Try to download the captured image (may not work on mobile)
@@ -285,9 +295,14 @@ const App: React.FC = () => {
                         link.download = `${card.name.replace(/\s+/g, '_')}_final.png`;
                         link.href = capturedCardImage;
                         link.click();
-                    } catch (e) { console.warn('Card image download skipped:', e); }
+                    } catch (e) {
+                        // Download failed (common on mobile), but we have the string for upload
+                        console.warn('Card image download skipped:', e);
+                    }
                 } catch (e) {
-                    console.warn('Card capture failed (common on mobile):', e);
+                    console.error('Card capture failed (likely memory limit):', e);
+                    // CRITICAL: We DO NOT stop. We proceed without the screenshot.
+                    // The user's original image and data are more important.
                 }
             }
 
@@ -313,7 +328,9 @@ const App: React.FC = () => {
                 : null;
 
             if (!originalBlob && !cardCaptureBlob) {
-                throw new Error('Could not process any images. Please try again or use a different browser.');
+                // Only fail IF BOTH images failed to process.
+                // If at least one exists (usually originalBlob), let it fly.
+                throw new Error('Could not process your image. Please try a different photo.');
             }
 
             const { imageUrl: _excludedImage, ...cardWithoutImage } = card;
@@ -331,6 +348,7 @@ const App: React.FC = () => {
                 ...cardWithoutImage,
                 totalBones: calculateTotalBones(card.gear, card.kinks),
                 newsletter: newsletterSubscribe,
+                captureFailed: !cardCaptureBlob // Notify backend if capture was missed
             });
             totalSize += new Blob([jsonPart]).size;
 
