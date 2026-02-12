@@ -295,36 +295,13 @@ const App: React.FC = () => {
                 // Wait for layout stability
                 await new Promise(resolve => setTimeout(resolve, 100));
 
-                // Pre-convert blob: URLs to data: URLs inside the node so
-                // html-to-image can serialize them (blob: URLs fail on iOS WebKit)
-                const imgElements = node.querySelectorAll('img');
-                const originalSrcs: { el: HTMLImageElement; src: string }[] = [];
-                for (const img of imgElements) {
-                    if (img.src.startsWith('blob:')) {
-                        try {
-                            const resp = await fetch(img.src);
-                            const blob = await resp.blob();
-                            const dataUrl = await new Promise<string>((resolve) => {
-                                const reader = new FileReader();
-                                reader.onloadend = () => resolve(reader.result as string);
-                                reader.readAsDataURL(blob);
-                            });
-                            originalSrcs.push({ el: img, src: img.src });
-                            img.src = dataUrl;
-                        } catch {
-                            // If conversion fails, leave original src — capture may still partially work
-                        }
-                    }
-                }
-
                 try {
-                    // Optimized capture settings for Mobile Safari stability
                     capturedCardImage = await htmlToImage.toPng(node, {
                         quality: 0.95,
                         backgroundColor: '#000000',
-                        cacheBust: true, // Force fresh render
-                        pixelRatio: 1,   // FORCE 1x resolution to save memory on mobile (Retina screens explode canvas size otherwise)
-                        width: 360,      // Explicit width to match container
+                        cacheBust: true,
+                        pixelRatio: 1,
+                        width: 360,
                         style: {
                             transform: 'scale(1)',
                             transformOrigin: 'top left',
@@ -340,18 +317,11 @@ const App: React.FC = () => {
                         link.href = capturedCardImage;
                         link.click();
                     } catch (e) {
-                        // Download failed (common on mobile), but we have the string for upload
                         console.warn('Card image download skipped:', e);
                     }
                 } catch (e) {
                     console.error('Card capture failed (likely memory limit):', e);
-                    // CRITICAL: We DO NOT stop. We proceed without the screenshot.
-                    // The user's original image and data are more important.
-                } finally {
-                    // Restore original blob: URLs to free the data URL memory
-                    for (const { el, src } of originalSrcs) {
-                        el.src = src;
-                    }
+                    // On iOS this is expected — we proceed without the screenshot.
                 }
             }
 
