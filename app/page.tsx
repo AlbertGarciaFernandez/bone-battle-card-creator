@@ -223,6 +223,8 @@ const App: React.FC = () => {
     const compressToBlob = (base64: string, maxWidth: number, quality: number): Promise<Blob> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
+            // Handle cross-origin images (though for local blob/data URLs it's fine)
+            img.crossOrigin = 'anonymous';
             img.src = base64;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -290,10 +292,21 @@ const App: React.FC = () => {
             }
 
             // 2. Compress images to binary Blobs (much smaller than base64 in JSON)
-            // Stricter limits for mobile: 800px max width, 0.7 quality
-            const originalBlob = card.imageUrl?.startsWith('data:')
-                ? await compressToBlob(card.imageUrl, 800, 0.7)
-                : null;
+            // Stricter limits for mobile: 800px max width (even 600px is fine for email ref), 0.7 quality
+            // We now support both data: and blob: URLs
+
+            let originalBlob: Blob | null = null;
+            if (card.imageUrl) {
+                try {
+                    // Try to compress whatever URL is there (blob: or data: or http:)
+                    // If it's http and has CORS issues, this will fail safely below
+                    originalBlob = await compressToBlob(card.imageUrl, 800, 0.7);
+                } catch (e) {
+                    console.warn('Could not compress original image (likely CORS or format issue):', e);
+                    // If compression fails, we just don't attach the original. 
+                    // This is better than failing the whole request.
+                }
+            }
 
             const cardCaptureBlob = capturedCardImage
                 ? await compressToBlob(capturedCardImage, 800, 0.7)

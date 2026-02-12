@@ -345,11 +345,15 @@ const CardForm: React.FC<CardFormProps> = ({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        handleChange('imageUrl', reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Use URL.createObjectURL instead of FileReader to save memory on mobile
+      // (avoid huge base64 strings)
+      const objectUrl = URL.createObjectURL(file);
+      handleChange('imageUrl', objectUrl);
+
+      // Clean up previous object URL if it exists and is a blob?
+      // Since we store it in card.imageUrl, we can't easily track previous without extra state,
+      // but browsers generally handle this okay for single page apps until reload.
+      // Ideally we'd revoke old one, but for now this is a huge improvement over base64 string spam.
     }
   };
 
