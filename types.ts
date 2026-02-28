@@ -45,7 +45,7 @@ export interface CardData {
   dogTricksPermission: boolean;
   gear: Record<string, number>; // value 0-5
   kinks: Record<string, number>; // value 0-5
-  dogTricks: string; // List of dog tricks if under 50 bones
+  dogTricks: string[]; // Selected dog tricks if under 50 bones
   imageZoom?: number;
   imagePosition?: { x: number; y: number };
   socialPlatform?: 'instagram' | 'other';

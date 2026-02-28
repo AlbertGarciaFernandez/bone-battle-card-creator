@@ -387,7 +387,7 @@ const CardForm: React.FC<CardFormProps> = ({
       const i = Math.round(totalInches % 12);
       setFt(f.toString());
       setInch(i.toString());
-      handleChange('height', `${val}m / ${f}'${i}"`);
+      handleChange('height', `${val}cm / ${f}'${i}"`);
     } else {
       setFt('');
       setInch('');
@@ -1055,30 +1055,82 @@ const CardForm: React.FC<CardFormProps> = ({
 
               {card.dogTricksPermission && (
                 <div className="mt-3 pl-7 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center gap-2 mb-2 text-amber-300">
-                    <Dog size={14} className="fill-current" />
-                    <span className="text-[11px] font-bold">
-                      Required: Select {requiredTricks} Dog Trick{requiredTricks !== 1 && 's'} (1 per 4 missing bones)
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-amber-300">
+                      <Dog size={14} className="fill-current" />
+                      <span className="text-[11px] font-bold">
+                        Required: Select {requiredTricks} Dog Trick{requiredTricks !== 1 && 's'} (1 per 4 missing bones)
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      (card.dogTricks || []).length >= requiredTricks
+                        ? 'bg-green-900/50 text-green-300'
+                        : 'bg-amber-900/50 text-amber-400'
+                    }`}>
+                      {(card.dogTricks || []).length}/{requiredTricks}
                     </span>
                   </div>
-                  <textarea
-                    className="w-full bg-slate-950 border border-amber-900/50 rounded-md p-2 text-xs text-amber-100 placeholder-amber-900/30 focus:border-amber-500/50 focus:outline-none min-h-[60px]"
-                    placeholder={`List your ${requiredTricks} dog tricks here...`}
-                    value={card.dogTricks || ''}
-                    onChange={(e) => handleChange('dogTricks', e.target.value)}
-                  />
-                  <div className="flex justify-between items-center mt-1">
-                    <a
-                      href="https://ugc.production.linktr.ee/cd8abbd3-c2bf-4cd2-ac46-5a4ebe5d47db_Bone-Battle---Dog-Tricks-Cheat-Sheet.pdf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[9px] text-amber-500 hover:text-amber-400 underline decoration-dotted"
-                    >
-                      View Dog Tricks Cheat Sheet
-                    </a>
-                    <span className="text-[9px] text-amber-600/60">
-                      Short by {missingBones} bones
-                    </span>
+                  <div className="space-y-1.5">
+                    {[
+                      { name: 'Equalizer', type: 'Defense', effect: 'Same Bone count as Attacker' },
+                      { name: 'Imposter', type: 'Attack + Defense', effect: 'Use any other card (same attribute) in your hand' },
+                      { name: 'Trickster', type: 'Attack + Defense', effect: 'Name any other attribute from the same category' },
+                      { name: 'Whatever', type: 'Defense', effect: 'Put 3 rows at Bone Count 0' },
+                      { name: 'Ignore', type: 'Defense', effect: 'Only Counter Attack/Defense Bones count now' },
+                      { name: 'Dom', type: 'Defense', effect: 'Force Attacker to change their chosen category' },
+                      { name: 'Vers', type: 'Attack + Defense', effect: 'Redirect to any adjacent attribute' },
+                      { name: 'Gag', type: 'Defense', effect: 'Gagged at Counterdefense' },
+                      { name: 'Caught', type: 'Defense', effect: 'Defense = 3; 5+ attack sends card to horny jail' },
+                      { name: 'Headspace', type: 'Defense', effect: "Use Attacker's Bone Count +1 on defense" },
+                    ].map((trick) => {
+                      const selected = (card.dogTricks || []).includes(trick.name);
+                      const maxReached = (card.dogTricks || []).length >= requiredTricks;
+                      const disabled = !selected && maxReached;
+                      return (
+                        <label
+                          key={trick.name}
+                          className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
+                            selected
+                              ? 'bg-amber-900/30 border-amber-500/60'
+                              : disabled
+                              ? 'bg-slate-900/20 border-slate-700/30 opacity-40 cursor-not-allowed'
+                              : 'bg-slate-900/40 border-slate-700/50 hover:border-amber-700/50 hover:bg-amber-950/20'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 accent-amber-500 cursor-pointer shrink-0"
+                            checked={selected}
+                            disabled={disabled}
+                            onChange={() => {
+                              const current = card.dogTricks || [];
+                              if (selected) {
+                                handleChange('dogTricks', current.filter((t: string) => t !== trick.name));
+                              } else if (!maxReached) {
+                                handleChange('dogTricks', [...current, trick.name]);
+                              }
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[11px] font-bold text-amber-200">{trick.name}</span>
+                              <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${
+                                trick.type === 'Defense'
+                                  ? 'bg-blue-900/50 text-blue-300'
+                                  : 'bg-purple-900/50 text-purple-300'
+                              }`}>{trick.type}</span>
+                            </div>
+                            <p className="text-[9px] text-amber-600/80 leading-tight mt-0.5">{trick.effect}</p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-[9px] text-amber-600/60">Short by {missingBones} bones</span>
+                    {(card.dogTricks || []).length >= requiredTricks && (
+                      <span className="text-[9px] text-green-400 font-bold">✓ Selection complete</span>
+                    )}
                   </div>
                 </div>
               )}

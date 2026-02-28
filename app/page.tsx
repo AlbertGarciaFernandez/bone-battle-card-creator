@@ -7,7 +7,7 @@ import GameGuideModal from '../components/GameGuideModal';
 import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES } from '../types';
 import { generateCardImage } from '../services/geminiService';
 import {
-    PawPrint, Download, FileText, Send, Instagram, Heart, Globe,
+    Download, FileText, Send, Instagram, Heart, Globe,
     Code, Camera, Gift, X, CheckCircle, Mail, MessageCircle, BookOpen,
     Loader2, AlertCircle, Sparkles
 } from 'lucide-react';
@@ -80,7 +80,7 @@ const INITIAL_CARD: CardData = {
     namePosition: 'left-top',
     statsPosition: 'right-middle',
     dogTricksPermission: false,
-    dogTricks: "",
+    dogTricks: [],
     imageZoom: 1,
     imagePosition: { x: 0, y: 0 },
     gear: Object.fromEntries(GEAR_CATEGORIES.map(c => [c, 0])),
@@ -115,7 +115,13 @@ const App: React.FC = () => {
         const hasEmptyFields = requiredFields.some(field => !field || field.trim() === "");
         const isPawsdayValid = /^\d{4}\.\d{2}$/.test(card.birthdate);
         const hasConsented = card.consent && card.decisionConsent;
-        const hasTotalBonesInRange = calculateTotalBones(card.gear, card.kinks) >= 50 && calculateTotalBones(card.gear, card.kinks) <= 70;
+        const rawBones = calculateTotalBones(card.gear, card.kinks);
+        const missingBones = Math.max(0, 50 - rawBones);
+        const requiredTricks = Math.ceil(missingBones / 4);
+        const tricksMakeUpShortfall = rawBones < 50
+            ? card.dogTricksPermission && (card.dogTricks || []).length >= requiredTricks
+            : true;
+        const hasTotalBonesInRange = (rawBones >= 50 || tricksMakeUpShortfall) && rawBones <= 70;
 
         return !hasEmptyFields && isPawsdayValid && hasConsented && hasTotalBonesInRange;
     };
@@ -158,26 +164,26 @@ const App: React.FC = () => {
 
         const baseHeaders = [
             "namev",
-            "VariabledetextoAlturaM",
-            "VariabledetextoAlturaImp",
-            "VariabledetextoPieEU",
-            "VariabledetextoPieUS",
-            "Birthdate",
-            "Social Link"
+            "VariabledetextoAltura",
+            "pawsday",
+            "statsleft",
+            "statsright",
+            "nameleft",
+            "nameright"
         ];
 
-        // Parse height and shoe size
-        const [heightM = "", heightImp = ""] = (card.height || "").split(" / ");
-        const [shoeEU = "", shoeUS = ""] = (card.shoeSize || "").split(" / ");
+        const combinedHeightShoe = sanitizeForExport(
+            `${(card.height || '').replace(/"/g, '')} | ${card.shoeSize || ''}`
+        );
 
         const baseValues = [
             sanitizeForExport(card.name),
-            sanitizeForExport(heightM),
-            sanitizeForExport(heightImp.replace(/"/g, '')),
-            sanitizeForExport(shoeEU),
-            sanitizeForExport(shoeUS),
+            combinedHeightShoe,
             sanitizeForExport(card.birthdate),
-            sanitizeForExport(card.socialLink)
+            card.statsPosition.includes('left') ? "true" : "false",
+            card.statsPosition.includes('right') ? "true" : "false",
+            card.namePosition.includes('left') ? "true" : "false",
+            card.namePosition.includes('right') ? "true" : "false"
         ];
 
         // Generate boolean values for gear/kinks (true if value matches column index)
@@ -295,6 +301,21 @@ const App: React.FC = () => {
                 // Wait for layout stability
                 await new Promise(resolve => setTimeout(resolve, 100));
 
+                // iOS fix: temporarily strip backdrop-filter from all child elements.
+                // WebKit cannot render backdrop-filter to canvas, causing html-to-image to fail.
+                // We save originals and restore them in the finally block regardless of outcome.
+                const backdropEls: Array<{ el: HTMLElement; bf: string; wbf: string }> = [];
+                node.querySelectorAll<HTMLElement>('*').forEach((el) => {
+                    const cs = window.getComputedStyle(el);
+                    const bf = cs.backdropFilter ?? '';
+                    const wbf = (cs as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter ?? '';
+                    if ((bf && bf !== 'none') || (wbf && wbf !== 'none')) {
+                        backdropEls.push({ el, bf: el.style.backdropFilter, wbf: (el.style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter ?? '' });
+                        el.style.backdropFilter = 'none';
+                        (el.style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = 'none';
+                    }
+                });
+
                 try {
                     capturedCardImage = await htmlToImage.toPng(node, {
                         quality: 0.95,
@@ -320,8 +341,13 @@ const App: React.FC = () => {
                         console.warn('Card image download skipped:', e);
                     }
                 } catch (e) {
-                    console.error('Card capture failed (likely memory limit):', e);
-                    // On iOS this is expected — we proceed without the screenshot.
+                    console.error('Card capture failed:', e);
+                } finally {
+                    // Always restore backdrop-filter so the live preview is not affected
+                    backdropEls.forEach(({ el, bf, wbf }) => {
+                        el.style.backdropFilter = bf;
+                        (el.style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = wbf;
+                    });
                 }
             }
 
@@ -496,13 +522,8 @@ const App: React.FC = () => {
             <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="bg-bone-500 p-2 rounded-lg shadow-lg shadow-bone-500/20">
-                            <PawPrint className="text-slate-900 w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold font-display text-bone-100 tracking-wide">BONE BATTLE <span className="text-bone-400">PREVIEW</span></h1>
-                            <p className="text-xs text-slate-500 uppercase tracking-widest font-mono">Card Creator</p>
-                        </div>
+                        <img src="/bb_logo_t.png" alt="Bone Battle Logo" className="h-12 w-12 object-contain drop-shadow-lg" />
+                        <img src="/bb_logotext_t.png" alt="Bone Battle" className="h-8 object-contain drop-shadow-md" />
                     </div>
                     <div className="flex gap-2">
                         <button
@@ -512,7 +533,7 @@ const App: React.FC = () => {
                                 ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 cursor-pointer animate-pulse'
                                 : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-50'
                                 }`}
-                            title={canSend ? "Send to Albert" : "Total bones must be between 40 and 70"}
+                            title={canSend ? "Send to Albert" : "Total bones must be 50–70 (or select Dog Tricks to balance)"}
                         >
                             <Send size={16} />
                             Send
@@ -561,9 +582,8 @@ const App: React.FC = () => {
                         <div>
                             <p className="text-sm font-bold text-amber-200">iOS Device Detected</p>
                             <p className="text-xs text-amber-300/80 mt-1">
-                                Sending cards from Safari or any iOS browser may not work due to Apple restrictions.
-                                For the best experience, please <strong className="text-white">use a desktop/laptop computer</strong> or
-                                an <strong className="text-white">Android device</strong> to submit your card.
+                                Submission from iOS is supported. If the card screenshot fails to capture,
+                                please <strong className="text-white">take a manual screenshot</strong> of your card preview and send it to Joker on Instagram.
                             </p>
                         </div>
                     </div>
