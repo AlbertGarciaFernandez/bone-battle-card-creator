@@ -12,6 +12,7 @@ import {
     Loader2, AlertCircle, Sparkles
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
+import html2canvas from 'html2canvas';
 
 // Constants
 const MIN_BONES = 40;
@@ -299,37 +300,37 @@ const App: React.FC = () => {
 
             if (node) {
                 // Wait for layout stability
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // iOS fix: temporarily strip backdrop-filter from all child elements.
-                // WebKit cannot render backdrop-filter to canvas, causing html-to-image to fail.
-                // We save originals and restore them in the finally block regardless of outcome.
-                const backdropEls: Array<{ el: HTMLElement; bf: string; wbf: string }> = [];
-                node.querySelectorAll<HTMLElement>('*').forEach((el) => {
-                    const cs = window.getComputedStyle(el);
-                    const bf = cs.backdropFilter ?? '';
-                    const wbf = (cs as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter ?? '';
-                    if ((bf && bf !== 'none') || (wbf && wbf !== 'none')) {
-                        backdropEls.push({ el, bf: el.style.backdropFilter, wbf: (el.style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter ?? '' });
-                        el.style.backdropFilter = 'none';
-                        (el.style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = 'none';
-                    }
-                });
+                await new Promise(resolve => setTimeout(resolve, 150));
 
                 try {
-                    capturedCardImage = await htmlToImage.toPng(node, {
-                        quality: 0.95,
-                        backgroundColor: '#000000',
-                        cacheBust: true,
-                        pixelRatio: 1,
-                        width: 360,
-                        style: {
-                            transform: 'scale(1)',
-                            transformOrigin: 'top left',
-                            borderRadius: '0',
-                            margin: '0'
-                        },
-                    });
+                    if (isIOS) {
+                        // iOS: html-to-image uses SVG foreignObject which WebKit cannot draw to canvas.
+                        // html2canvas re-implements CSS rendering directly — no SVG foreignObject — works on iOS.
+                        // backdrop-filter is silently ignored by html2canvas (no blur, but capture succeeds).
+                        const canvas = await html2canvas(node, {
+                            useCORS: true,
+                            allowTaint: false,
+                            backgroundColor: '#000000',
+                            scale: 1,
+                            logging: false,
+                            width: 360,
+                        });
+                        capturedCardImage = canvas.toDataURL('image/png');
+                    } else {
+                        capturedCardImage = await htmlToImage.toPng(node, {
+                            quality: 0.95,
+                            backgroundColor: '#000000',
+                            cacheBust: true,
+                            pixelRatio: 1,
+                            width: 360,
+                            style: {
+                                transform: 'scale(1)',
+                                transformOrigin: 'top left',
+                                borderRadius: '0',
+                                margin: '0'
+                            },
+                        });
+                    }
 
                     // Try to download the captured image (may not work on mobile)
                     try {
@@ -342,12 +343,6 @@ const App: React.FC = () => {
                     }
                 } catch (e) {
                     console.error('Card capture failed:', e);
-                } finally {
-                    // Always restore backdrop-filter so the live preview is not affected
-                    backdropEls.forEach(({ el, bf, wbf }) => {
-                        el.style.backdropFilter = bf;
-                        (el.style as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = wbf;
-                    });
                 }
             }
 
