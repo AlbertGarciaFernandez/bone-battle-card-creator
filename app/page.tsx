@@ -358,16 +358,6 @@ const App: React.FC = () => {
                             },
                         });
                     }
-
-                    // Try to download the captured image (may not work on mobile)
-                    try {
-                        const link = document.createElement('a');
-                        link.download = `${card.name.replace(/\s+/g, '_')}_final.png`;
-                        link.href = capturedCardImage;
-                        link.click();
-                    } catch (e) {
-                        console.warn('Card image download skipped:', e);
-                    }
                 } catch (e) {
                     console.error('Card capture failed:', e);
                 }
