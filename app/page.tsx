@@ -256,14 +256,16 @@ const App: React.FC = () => {
     // Uses fetch + createImageBitmap for blob:/data: URLs (avoids Mobile Safari Image bugs)
     // Falls back to Image element for http: URLs or when createImageBitmap is unavailable
     const compressToBlob = async (src: string, maxWidth: number, quality: number): Promise<Blob> => {
-        // Strategy 1: For blob: and data: URLs, use fetch + createImageBitmap
-        // This completely bypasses new Image() which has multiple Mobile Safari bugs:
-        //   - crossOrigin on blob: URLs causes load failure
-        //   - canvas can be tainted even without crossOrigin
-        //   - onload race conditions with cached images
+        // Strategy 1: For blob: and data: URLs, use createImageBitmap (avoids Mobile Safari bugs)
         if ((src.startsWith('blob:') || src.startsWith('data:')) && typeof createImageBitmap === 'function') {
-            const response = await fetch(src);
-            const blob = await response.blob();
+            let blob: Blob;
+            if (src.startsWith('data:')) {
+                // fetch() does NOT support data: URLs on iOS Chrome — convert manually instead
+                blob = dataURLtoBlob(src);
+            } else {
+                const response = await fetch(src);
+                blob = await response.blob();
+            }
             const bitmap = await createImageBitmap(blob);
             return canvasCompress(bitmap, bitmap.width, bitmap.height, maxWidth, quality);
         }
@@ -284,6 +286,24 @@ const App: React.FC = () => {
         });
     };
 
+    // Helper: canvas.toBlob wrapped in a Promise (avoids iOS toDataURL RAM explosion)
+    const canvasToBlob = (
+        canvas: HTMLCanvasElement,
+        type: string,
+        quality: number
+    ): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) reject(new Error('Canvas toBlob failed'));
+                    else resolve(blob);
+                },
+                type,
+                quality
+            );
+        });
+    };
+
     // Step 2: Actually Send
     const handleFinalizeSend = async () => {
         setIsSending(true);
@@ -296,11 +316,17 @@ const App: React.FC = () => {
         try {
             // 1. Try to capture the card as an image (may fail on mobile memory limits)
             let capturedCardImage: string | null = null;
+            let capturedCardBlob: Blob | null = null;
             const node = document.getElementById('card-preview-container');
 
+            if (!node) {
+                throw new Error('Card preview element not found');
+            }
+
             if (node) {
-                // Wait for layout stability
-                await new Promise(resolve => setTimeout(resolve, 150));
+                // Wait for fonts and next paint before capturing
+                await document.fonts.ready;
+                await new Promise(requestAnimationFrame);
 
                 try {
                     if (isIOS) {
@@ -315,7 +341,8 @@ const App: React.FC = () => {
                             logging: false,
                             width: 360,
                         });
-                        capturedCardImage = canvas.toDataURL('image/png');
+                        // ✅ Direct to Blob — no base64 intermediate (reduces iOS RAM peak)
+                        capturedCardBlob = await canvasToBlob(canvas, 'image/jpeg', 0.8);
                     } else {
                         capturedCardImage = await htmlToImage.toPng(node, {
                             quality: 0.95,
@@ -370,9 +397,11 @@ const App: React.FC = () => {
                 }
             }
 
-            const cardCaptureBlob = capturedCardImage
-                ? await compressToBlob(capturedCardImage, 800, 0.7)
-                : null;
+            const cardCaptureBlob =
+                capturedCardBlob ??
+                (capturedCardImage
+                    ? await compressToBlob(capturedCardImage, 800, 0.7)
+                    : null);
 
             if (!originalBlob && !cardCaptureBlob) {
                 // Only fail IF BOTH images failed to process.
@@ -384,7 +413,7 @@ const App: React.FC = () => {
             const formData = new FormData();
 
             // 3. Payload Size Check Before Sending
-            const MAX_PAYLOAD_SIZE = 4 * 1024 * 1024; // 4MB safe limit (Vercel is 4.5MB)
+            const MAX_PAYLOAD_SIZE = 3.5 * 1024 * 1024; // 3.5MB — multipart overhead buffer
             let totalSize = 0;
 
             if (originalBlob) totalSize += originalBlob.size;
