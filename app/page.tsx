@@ -310,9 +310,6 @@ const App: React.FC = () => {
         setSubmitStatus('sending');
         setSendError(null);
 
-        // Attempt downloads as backup (don't let failures block the send)
-        try { handleExportPhotoshopTXT(); } catch (e) { console.warn('TXT download skipped:', e); }
-
         try {
             // 1. Try to capture the card as an image (may fail on mobile memory limits)
             let capturedCardImage: string | null = null;
