@@ -120,7 +120,7 @@ export async function POST(req: Request) {
 
         const { data, error } = await resend.emails.send({
             from: 'Bone Battle <cards@codehunterlab.com>',
-            to: 'albert@codehunterlab.com',
+            to: ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'],
             subject: `New Bone Battle Card: ${card.name}${hasDogTricks ? ' 🐕' : ''}`,
             html,
             attachments,
