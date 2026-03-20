@@ -8,10 +8,11 @@ interface AppHeaderProps {
     canSend: boolean;
     onSend: () => void;
     onExportTXT: () => void;
+    onExportCSV: () => void;
     onExportJSON: () => void;
 }
 
-export default function AppHeader({ canSend, onSend, onExportTXT, onExportJSON }: AppHeaderProps) {
+export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, onExportJSON }: AppHeaderProps) {
     return (
         <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -45,6 +46,7 @@ export default function AppHeader({ canSend, onSend, onExportTXT, onExportJSON }
                         <Send size={16} />
                         Send
                     </button>
+                    {/* Export buttons temporarily disabled
                     <div className="w-px h-8 bg-slate-800 mx-1 hidden sm:block" />
                     <button
                         onClick={onExportTXT}
@@ -55,12 +57,21 @@ export default function AppHeader({ canSend, onSend, onExportTXT, onExportJSON }
                         TXT
                     </button>
                     <button
+                        onClick={onExportCSV}
+                        className="hidden sm:flex items-center gap-2 bg-teal-700 hover:bg-teal-600 text-white text-sm px-4 py-2 rounded-lg border border-teal-600 transition-colors shadow-lg"
+                        title="Export as CSV"
+                    >
+                        <FileText size={16} />
+                        CSV
+                    </button>
+                    <button
                         onClick={onExportJSON}
                         className="hidden sm:flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sm px-4 py-2 rounded-lg border border-slate-700 transition-colors"
                     >
                         <Download size={16} />
                         JSON
                     </button>
+                    */}
                 </div>
             </div>
 

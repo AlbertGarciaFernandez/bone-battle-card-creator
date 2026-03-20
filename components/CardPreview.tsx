@@ -7,19 +7,19 @@ interface CardPreviewProps {
 }
 
 const ColorMap: Record<HoodColor, string> = {
-  [HoodColor.RED]: 'bg-red-600 border-red-600 text-red-500',
-  [HoodColor.ORANGE]: 'bg-orange-500 border-orange-500 text-orange-500',
-  [HoodColor.YELLOW]: 'bg-yellow-400 border-yellow-400 text-yellow-500',
-  [HoodColor.BLUE]: 'bg-blue-600 border-blue-600 text-blue-500',
-  [HoodColor.GREEN]: 'bg-green-600 border-green-600 text-green-500',
-  [HoodColor.BLACK]: 'bg-slate-900 border-slate-700 text-slate-500',
-  [HoodColor.WHITE]: 'bg-slate-100 border-white text-slate-400',
-  [HoodColor.BROWN]: 'bg-amber-800 border-amber-800 text-amber-700',
-  [HoodColor.PURPLE]: 'bg-purple-600 border-purple-600 text-purple-500',
-  [HoodColor.PINK]: 'bg-pink-500 border-pink-500 text-pink-500',
-  [HoodColor.GRAY]: 'bg-gray-500 border-gray-500 text-gray-500',
-  [HoodColor.CAMO]: 'bg-emerald-800 border-emerald-800 text-emerald-700',
-  [HoodColor.MULTI]: 'bg-indigo-500 border-indigo-500 text-indigo-500',
+  [HoodColor.RED]: 'bg-red-600 border-red-600 text-red-300',
+  [HoodColor.ORANGE]: 'bg-orange-500 border-orange-500 text-orange-300',
+  [HoodColor.YELLOW]: 'bg-yellow-400 border-yellow-400 text-yellow-200',
+  [HoodColor.BLUE]: 'bg-blue-600 border-blue-600 text-blue-400',
+  [HoodColor.GREEN]: 'bg-green-600 border-green-600 text-green-400',
+  [HoodColor.BLACK]: 'bg-slate-900 border-slate-700 text-white',
+  [HoodColor.WHITE]: 'bg-slate-100 border-white text-white',
+  [HoodColor.BROWN]: 'bg-amber-800 border-amber-800 text-amber-400',
+  [HoodColor.PURPLE]: 'bg-purple-600 border-purple-600 text-purple-300',
+  [HoodColor.PINK]: 'bg-pink-500 border-pink-500 text-fuchsia-200',
+  [HoodColor.GRAY]: 'bg-gray-500 border-gray-500 text-gray-300',
+  [HoodColor.CAMO]: 'bg-emerald-800 border-emerald-800 text-lime-400',
+  [HoodColor.MULTI]: 'bg-indigo-500 border-indigo-500 text-violet-300',
 };
 
 // Layout configurations
@@ -109,7 +109,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
 
 
   return (
-    <div id="card-preview-container" className={`relative w-[360px] h-auto min-h-[640px] rounded-2xl overflow-hidden bg-black flex flex-col shadow-2xl border-4 ${borderColor} font-sans`}>
+    <div id="card-preview-container" className={`relative w-[360px] h-auto min-h-[640px] rounded-2xl overflow-hidden bg-black flex flex-col shadow-2xl border-4 border-neutral-800 font-sans`}>
 
       {/* Preview Warning Overlay */}
       <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-10">
@@ -136,7 +136,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
 
         {/* Name Overlay */}
         <div className={`${getNameStyles(namePosition)} bg-black/40 backdrop-blur-md py-2`}>
-          <h2 className="text-2xl font-black text-white drop-shadow-md">
+          <h2 className={`text-2xl font-black ${textColor} drop-shadow-md`}>
             {name || "PUP NAME"}
           </h2>
         </div>

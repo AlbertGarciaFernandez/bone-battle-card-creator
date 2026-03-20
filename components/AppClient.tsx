@@ -209,10 +209,12 @@ export default function AppClient() {
     const getPhotoshopTXTContent = (): string => {
         const gearHeaders = GEAR_KEYS_ORDERED.flatMap((item) => Array.from({ length: 5 }, (_, i) => `${item.prefix}${i + 1}`));
         const kinkHeaders = KINKS_KEYS_ORDERED.flatMap((item) => Array.from({ length: 5 }, (_, i) => `${item.prefix}${i + 1}`));
-        const combinedHeightShoe = sanitizeForExport(`${(card.height || '').replace(/"/g, '')} | ${card.shoeSize || ''}`);
-        const baseHeaders = ['namev', 'VariabledetextoAltura', 'pawsday', 'statsleft', 'statsright', 'nameleft', 'nameright'];
+        const baseHeaders = ['namev', 'VariabledetextoAltura', 'VariabledetextoPie', 'pawsday', 'statsleft', 'statsright', 'nameleft', 'nameright'];
         const baseValues = [
-            sanitizeForExport(card.name), combinedHeightShoe, sanitizeForExport(card.birthdate),
+            sanitizeForExport(card.name),
+            sanitizeForExport((card.height || '').replace(/"/g, '')),
+            sanitizeForExport(card.shoeSize || ''),
+            sanitizeForExport(card.birthdate),
             card.statsPosition.includes('left') ? 'true' : 'false',
             card.statsPosition.includes('right') ? 'true' : 'false',
             card.namePosition.includes('left') ? 'true' : 'false',
@@ -228,7 +230,13 @@ export default function AppClient() {
         });
         const headers = [...baseHeaders, ...gearHeaders, ...kinkHeaders];
         const values = [...baseValues, ...gearValues, ...kinkValues];
-        return `${headers.join('\t')}\n${values.join('\t')}`;
+
+        // Sort columns alphabetically by header name
+        const pairs = headers.map((h, i) => [h, values[i]] as [string, string]);
+        pairs.sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: 'base' }));
+        const sortedHeaders = pairs.map(p => p[0]);
+        const sortedValues = pairs.map(p => p[1]);
+        return `${sortedHeaders.join('\t')}\n${sortedValues.join('\t')}`;
     };
 
     const handleGenerateImageOnly = async () => {
@@ -246,11 +254,57 @@ export default function AppClient() {
         }
     };
 
+    const getCSVContent = (): string => {
+        const txtContent = getPhotoshopTXTContent();
+        const [headerRow, valueRow] = txtContent.split('\n');
+        const csvCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
+        const headers = headerRow.split('\t').map(csvCell).join(',');
+        const values = valueRow.split('\t').map(csvCell).join(',');
+        return `${headers}\n${values}`;
+    };
+
+    const getCardSchemaJSON = (): string => {
+        const gearMap: Record<string, string> = {
+            'Rubber': 'rubber', 'Leather': 'leather', 'Sox/Sneaker': 'skate',
+            'Jocks/Undies': 'underwear', 'Furry': 'suit', 'MX/Biker': 'mx',
+            'Sportswear': 'sports', 'Tactical/Unif.': 'tactical',
+        };
+        const kinkMap: Record<string, string> = {
+            'Outdoor/Dares': 'outdoor', 'Sniffing': 'sniffing', 'Edging': 'edging',
+            'Fisting': 'fisting', 'ABDL': 'abdl', 'Toys': 'toys',
+            'Cuckolding': 'cuckolding', 'Power Play': 'powerplay', 'Chastity': 'chastity',
+            'BDSM': 'bdsm', 'Verbal': 'verbal', 'Dirty': 'dirty',
+        };
+        const gear: Record<string, number> = {};
+        for (const [label, key] of Object.entries(gearMap)) gear[key] = card.gear[label] ?? 0;
+        const kinks: Record<string, number> = {};
+        for (const [label, key] of Object.entries(kinkMap)) kinks[key] = card.kinks[label] ?? 0;
+
+        return JSON.stringify({
+            name: card.name,
+            color: card.hoodColor.toLowerCase(),
+            pawsday: card.birthdate,
+            height: card.height,
+            shoe_size: card.shoeSize,
+            social_link: card.socialLink,
+            country: card.country,
+            gear,
+            kinks,
+            good_boy_title: 'Good Boy',
+            rarity: 'common',
+            is_custom: true,
+            is_published: false,
+        }, null, 2);
+    };
+
     const handleExportJSON = () =>
-        downloadFile(JSON.stringify(card, null, 2), `${card.name || 'card'}_data.json`, 'application/json;charset=utf-8');
+        downloadFile(getCardSchemaJSON(), `${card.name || 'card'}_card.json`, 'application/json;charset=utf-8');
 
     const handleExportPhotoshopTXT = () =>
         downloadFile(getPhotoshopTXTContent(), `${card.name || 'pup'}_ps_data.txt`, 'text/plain;charset=utf-8');
+
+    const handleExportCSV = () =>
+        downloadFile(getCSVContent(), `${card.name || 'pup'}_ps_data.csv`, 'text/csv;charset=utf-8');
 
     const handleFinalizeSend = async () => {
         dispatchSend({ type: 'START' });
@@ -293,13 +347,17 @@ export default function AppClient() {
             const { imageUrl: _excluded, ...cardWithoutImage } = card;
             const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), newsletter: sendState.newsletter, captureFailed: !cardCaptureBlob });
             const textPart = getPhotoshopTXTContent();
-            const totalSize = (originalBlob?.size ?? 0) + (cardCaptureBlob?.size ?? 0) + new Blob([jsonPart]).size + new Blob([textPart]).size;
+            const csvPart = getCSVContent();
+            const schemaJsonPart = getCardSchemaJSON();
+            const totalSize = (originalBlob?.size ?? 0) + (cardCaptureBlob?.size ?? 0) + new Blob([jsonPart]).size + new Blob([textPart]).size + new Blob([csvPart]).size + new Blob([schemaJsonPart]).size;
 
             if (totalSize > 3.5 * 1024 * 1024) throw new Error(`File size too large (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try a different photo.`);
 
             const formData = new FormData();
             formData.append('card', jsonPart);
             formData.append('cardText', textPart);
+            formData.append('cardCSV', csvPart);
+            formData.append('cardSchemaJSON', schemaJsonPart);
             if (originalBlob) formData.append('originalImage', originalBlob, `${card.name.replace(/\s+/g, '_')}_original.jpg`);
             if (cardCaptureBlob) formData.append('cardCapture', cardCaptureBlob, `${card.name.replace(/\s+/g, '_')}_card.jpg`);
 
@@ -353,6 +411,7 @@ export default function AppClient() {
                 canSend={canSend}
                 onSend={() => dispatchModal({ type: 'OPEN_SEND' })}
                 onExportTXT={handleExportPhotoshopTXT}
+                onExportCSV={handleExportCSV}
                 onExportJSON={handleExportJSON}
             />
 

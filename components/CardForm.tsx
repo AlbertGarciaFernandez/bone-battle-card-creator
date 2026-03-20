@@ -316,6 +316,9 @@ const CardForm: React.FC<CardFormProps> = ({
   // initialized from card data if available, defaulting to instagram
   const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'other'>(card.socialPlatform || 'instagram');
 
+  // Contact Preference State
+  const [contactPlatform, setContactPlatform] = useState<'instagram' | 'telegram'>(card.contactPlatform || 'instagram');
+
   // Custom Country State
   const [isCustomCountry, setIsCustomCountry] = useState(false);
   const [customCountryName, setCustomCountryName] = useState('');
@@ -336,6 +339,12 @@ const CardForm: React.FC<CardFormProps> = ({
   useEffect(() => {
     handleChange('socialPlatform', socialPlatform);
   }, [socialPlatform]);
+
+  // Sync contact platform; clear telegram handle when switching to instagram
+  useEffect(() => {
+    handleChange('contactPlatform', contactPlatform);
+    if (contactPlatform === 'instagram') handleChange('telegramHandle', '');
+  }, [contactPlatform]);
 
   const handleMatrixChange = (category: 'gear' | 'kinks', key: string, value: number) => {
     const newMap = { ...card[category], [key]: value };
@@ -413,18 +422,35 @@ const CardForm: React.FC<CardFormProps> = ({
     }
   };
 
-  // Shoe Conversion Logic (Revised: EU = 32.7 + 1.27 * US)
+  // Shoe Conversion Logic — lookup table based on Wikipedia shoe size table
+  const EU_TO_US: Record<number, number> = {
+    35: 3, 35.5: 3.5, 36: 4, 36.5: 4.5,
+    37: 5, 37.5: 5.5, 38: 6, 38.5: 6.5,
+    39: 7, 40: 7.5, 40.5: 8, 41: 8.5,
+    42: 9, 42.5: 9.5, 43: 10, 44: 10.5,
+    44.5: 11, 45: 11.5, 45.5: 12, 46: 12.5,
+    47: 13, 48: 14, 49: 15
+  };
+  const US_TO_EU: Record<number, number> = Object.fromEntries(
+    Object.entries(EU_TO_US).map(([eu, us]) => [us, parseFloat(eu)])
+  );
+
+  const lookupNearest = (table: Record<number, number>, input: number): number => {
+    const keys = Object.keys(table).map(Number);
+    const nearest = keys.reduce((prev, curr) =>
+      Math.abs(curr - input) < Math.abs(prev - input) ? curr : prev
+    );
+    return table[nearest];
+  };
+
   const updateShoeFromEu = (val: string) => {
     if (val.length > 5) return;
     setEuShoe(val);
     const numEu = parseFloat(val);
     if (!isNaN(numEu) && numEu > 30) {
-      // US = (EU - 32.7) / 1.27
-      const calcUs = (numEu - 32.7) / 1.27;
-      // Round to nearest 0.5
-      const roundedUs = Math.round(calcUs * 2) / 2;
-      setUsShoe(roundedUs.toString());
-      handleChange('shoeSize', `${val}EU / ${roundedUs}US`);
+      const usVal = lookupNearest(EU_TO_US, numEu);
+      setUsShoe(usVal.toString());
+      handleChange('shoeSize', `${val}EU / ${usVal}US`);
     } else {
       handleChange('shoeSize', val);
     }
@@ -435,11 +461,9 @@ const CardForm: React.FC<CardFormProps> = ({
     setUsShoe(val);
     const numUs = parseFloat(val);
     if (!isNaN(numUs) && numUs > 0) {
-      // EU = 32.7 + 1.27 * US
-      const calcEu = 32.7 + (1.27 * numUs);
-      const roundedEu = Math.round(calcEu * 10) / 10; // 1 decimal place
-      setEuShoe(roundedEu.toString());
-      handleChange('shoeSize', `${roundedEu}EU / ${val}US`);
+      const euVal = lookupNearest(US_TO_EU, numUs);
+      setEuShoe(euVal.toString());
+      handleChange('shoeSize', `${euVal}EU / ${val}US`);
     } else {
       handleChange('shoeSize', val);
     }
@@ -903,8 +927,47 @@ const CardForm: React.FC<CardFormProps> = ({
             </div>
           </div>
 
-
-
+          {/* Contact Preference */}
+          <div>
+            <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
+              How to contact you
+            </label>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                  <input
+                    type="radio"
+                    name="contactPlatform"
+                    checked={contactPlatform === 'instagram'}
+                    onChange={() => setContactPlatform('instagram')}
+                    className="w-4 h-4 accent-purple-500"
+                  />
+                  <Instagram size={14} className="text-purple-400" />
+                  <span className="text-xs text-slate-300 font-bold">Instagram</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                  <input
+                    type="radio"
+                    name="contactPlatform"
+                    checked={contactPlatform === 'telegram'}
+                    onChange={() => setContactPlatform('telegram')}
+                    className="w-4 h-4 accent-sky-400"
+                  />
+                  <span className="text-sky-400 font-bold text-xs">✈</span>
+                  <span className="text-xs text-slate-300 font-bold">Telegram</span>
+                </label>
+              </div>
+              {contactPlatform === 'telegram' && (
+                <input
+                  type="text"
+                  placeholder="@telegram_username"
+                  value={card.telegramHandle || ''}
+                  onChange={(e) => handleChange('telegramHandle', e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 focus:outline-none"
+                />
+              )}
+            </div>
+          </div>
 
         </div>
 

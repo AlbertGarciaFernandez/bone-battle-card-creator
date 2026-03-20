@@ -21,8 +21,8 @@ export const GEAR_CATEGORIES = [
 
 export const KINKS_CATEGORIES = [
   "Outdoor/Dares", "Sniffing", "Edging", "Fisting",
-  "ABDL", "Toys", "Dirty", "BDSM",
-  "Cuckolding", "Power Play", "Chastity", "Verbal"
+  "ABDL", "Toys",
+  "Cuckolding", "Power Play", "Chastity", "BDSM", "Verbal", "Dirty"
 ];
 
 export type CardPosition =
@@ -49,6 +49,8 @@ export interface CardData {
   imageZoom?: number;
   imagePosition?: { x: number; y: number };
   socialPlatform?: 'instagram' | 'other';
+  contactPlatform?: 'instagram' | 'telegram';
+  telegramHandle?: string;
 }
 
 export interface AIServiceResponse {
