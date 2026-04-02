@@ -280,6 +280,10 @@ export default function AppClient() {
         const kinks: Record<string, number> = {};
         for (const [label, key] of Object.entries(kinkMap)) kinks[key] = card.kinks[label] ?? 0;
 
+        // Per-category trick assignments (null = no trick needed / pending admin assignment)
+        const gear_tricks: Record<string, null> = Object.fromEntries(Object.keys(gear).map((k) => [k, null]));
+        const kinks_tricks: Record<string, null> = Object.fromEntries(Object.keys(kinks).map((k) => [k, null]));
+
         return JSON.stringify({
             name: card.name,
             color: card.hoodColor.toLowerCase(),
@@ -290,10 +294,14 @@ export default function AppClient() {
             country: card.country,
             gear,
             kinks,
+            gear_tricks,
+            kinks_tricks,
             good_boy_title: 'Good Boy',
             rarity: 'common',
             is_custom: true,
             is_published: false,
+            is_torn: false,
+            is_sample: false,
         }, null, 2);
     };
 
@@ -365,6 +373,15 @@ export default function AppClient() {
             let result;
             try { result = await response.json(); } catch { throw new Error(`Server error (${response.status}). Please try again.`); }
             if (!response.ok) throw new Error(result.error || 'Failed to send card');
+
+            // Log Base44 sync result to browser console for debugging
+            if (result.sync) {
+                if (result.sync.ok) {
+                    console.log('[Base44 sync] ✅ OK', result.sync.status, result.sync.body);
+                } else {
+                    console.warn('[Base44 sync] ❌ Failed', result.sync.status, result.sync.body ?? result.sync.error);
+                }
+            }
 
             dispatchSend({ type: 'SUCCESS' });
             setTimeout(() => {

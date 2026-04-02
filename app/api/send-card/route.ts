@@ -3,6 +3,17 @@ import { NextResponse } from 'next/server';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ─── Base44 field parsers ─────────────────────────────────────────────────────
+
+
+/** "DE" → "🇩🇪" (ISO 3166-1 alpha-2 → emoji flag) */
+const countryCodeToEmoji = (val: unknown): string | null => {
+    const s = String(val ?? '').trim().toUpperCase();
+    if (s.length !== 2) return s || null;
+    return [...s].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+};
+
+
 type Attachment = {
     filename: string;
     content: Buffer | string;
@@ -89,10 +100,12 @@ export async function POST(req: Request) {
         }
 
         // 4. Card capture screenshot (optional — may not be available on mobile)
+        let cardCaptureBuffer: Buffer | null = null;
         if (cardCapture && cardCapture.size > 0) {
+            cardCaptureBuffer = Buffer.from(await cardCapture.arrayBuffer());
             attachments.push({
                 filename: cardCapture.name || `${safeName}_card.jpg`,
-                content: Buffer.from(await cardCapture.arrayBuffer()),
+                content: cardCaptureBuffer,
             });
         }
 
@@ -174,7 +187,7 @@ export async function POST(req: Request) {
 
         const { data, error } = await resend.emails.send({
             from: 'Bone Battle <cards@codehunterlab.com>',
-            to: ['albert@codehunterlab.com'],
+            to: ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'],
             subject: `New Bone Battle Card: ${card.name}${hasDogTricks ? ' 🐕' : ''}`,
             html,
             attachments,
@@ -185,48 +198,68 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        // ── Sync to external app — DISABLED FOR TESTING ──────────────────────
-        // Re-enable by uncommenting the block below
-        /*
-to: ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'],
-
+        // ── Sync to CardDatabase ──────────────────────────────────────────────
+        let syncResult: { ok: boolean; status?: number; body?: unknown; error?: string } = { ok: false };
         if (cardSchemaJSON) {
             const appApiBase = process.env.APP_API_BASE || 'https://bonebattle.base44.app';
             const appApiKey = process.env.APP_API_KEY || 'bc55db07135e4fdf850a550300b46303';
             const appId = '69859fe3e323b5c0e80da0c3';
-            (async () => {
-                try {
-                    const headers = { 'api_key': appApiKey, 'Content-Type': 'application/json' };
-                    const cardPayload = JSON.parse(cardSchemaJSON);
-                    if (originalImageBuffer) {
-                        const photoMime = originalImage?.type || 'image/jpeg';
-                        cardPayload.pup_photo = `data:${photoMime};base64,${originalImageBuffer.toString('base64')}`;
-                    }
-                    const cardRes = await fetch(`${appApiBase}/api/apps/${appId}/entities/Card`, {
-                        method: 'POST', headers, body: JSON.stringify(cardPayload),
-                    });
-                    const cardResult = await cardRes.json();
-                    const createdCardId: string | null = cardResult?.id ?? cardResult?._id ?? null;
-                    const submission: Record<string, unknown> = {
-                        submission_type: 'new_digital_card',
-                        status: 'pending',
-                        privacy_consent: true,
-                        claimed_by: '',
-                        creator_name: cardPayload.name ?? '',
-                        creator_link: cardPayload.social_link ?? '',
-                    };
-                    if (createdCardId) submission.linked_card_id = createdCardId;
-                    await fetch(`${appApiBase}/api/apps/${appId}/entities/CardSubmission`, {
-                        method: 'POST', headers, body: JSON.stringify(submission),
-                    });
-                } catch (appErr) {
-                    console.error('External app sync failed:', appErr);
+            try {
+                const parsedCard = JSON.parse(cardSchemaJSON);
+                const headers = { 'api_key': appApiKey, 'Content-Type': 'application/json' };
+                const payload: Record<string, unknown> = {
+                    name: parsedCard.name ?? '',
+                    color: parsedCard.color ?? null,
+                    pawsday: parsedCard.pawsday ?? null,
+                    height: parsedCard.height ?? null,
+                    shoe_size: parsedCard.shoe_size ?? null,
+                    social_link: parsedCard.social_link ?? null,
+                    country: countryCodeToEmoji(parsedCard.country),
+                    gear: parsedCard.gear ?? {},
+                    kinks: parsedCard.kinks ?? {},
+                    gear_tricks: parsedCard.gear_tricks ?? null,
+                    kinks_tricks: parsedCard.kinks_tricks ?? null,
+                    serial: '',
+                    dog_trick: null,
+                    description: null,
+                    rarity: 'common',
+                    is_online_playable: false,
+                    is_collectable_only: false,
+                    is_creator_verified: false,
+                    allow_trades: false,
+                    is_draft: true,
+                    is_published: false,
+                    is_special_card: false,
+                    is_custom: parsedCard.is_custom ?? true,
+                    is_torn: parsedCard.is_torn ?? false,
+                    is_sample: parsedCard.is_sample ?? false,
+                    creator_name: parsedCard.name ?? '',
+                    creator_link: parsedCard.creator_link ?? null,
+                    privacy_consent: true,
+                    trade_consent: false,
+                };
+                // images sent via email attachments only; Base44 upload pending
+                console.log('[Base44 sync] POST payload (no images):', JSON.stringify({ ...payload, original_image_url: payload.original_image_url ? '[base64]' : undefined, card_png_url: payload.card_png_url ? '[base64]' : undefined }, null, 2));
+                const syncRes = await fetch(`${appApiBase}/api/apps/${appId}/entities/Card`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload),
+                });
+                let syncBody: unknown;
+                try { syncBody = await syncRes.json(); } catch { syncBody = null; }
+                syncResult = { ok: syncRes.ok, status: syncRes.status, body: syncBody };
+                if (!syncRes.ok) {
+                    console.error('[Base44 sync] Failed:', syncRes.status, syncBody);
+                } else {
+                    console.log('[Base44 sync] OK:', syncRes.status, syncBody);
                 }
-            })();
+            } catch (appErr: any) {
+                syncResult = { ok: false, error: appErr?.message ?? String(appErr) };
+                console.error('[Base44 sync] Exception:', appErr);
+            }
         }
-        */
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({ success: true, data, sync: syncResult });
     } catch (err: any) {
         console.error('Server Error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
