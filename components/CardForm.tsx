@@ -1202,36 +1202,122 @@ const CardForm: React.FC<CardFormProps> = ({
 
         </div>
 
+        {/* ── Consent & Terms of Use ─────────────────────────────────────── */}
         <div className="space-y-3">
-          <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.consent ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/30'
-            }`}>
+
+          {/* Scrollable T&C box */}
+          <div className="rounded-lg border border-slate-600 bg-slate-900/60 overflow-hidden">
+            <div className="px-4 py-2.5 bg-slate-800/80 border-b border-slate-600 flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">🐾 BoneBattle – Consent & Terms of Use</span>
+            </div>
+            <div className="h-52 overflow-y-auto px-4 py-3 text-xs text-slate-300 leading-relaxed space-y-3 scrollbar-thin scrollbar-thumb-slate-600">
+
+              <div>
+                <p className="font-semibold text-slate-100 mb-1">1. Copyright &amp; Image Rights</p>
+                <p><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Image Source:</span> You confirm that you possess the unrestricted copyright and usage rights for the submitted photo (or that you have the photographer's explicit permission for use within the context of BoneBattle).</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Waiver of Liability:</span> You indemnify and hold the creator (Joker) harmless from any third-party claims arising from the unauthorized use of the provided image material.</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-100 mb-1">2. Consent for Use (Physical &amp; Promo) – Basic Consent</p>
+                <p>By submitting your data for the creation of your card, you consent to the following uses:</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Card Design:</span> The processing of your data (name, stats, kinks) and your image for the creation of the digital print template.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Promotion:</span> The display of your card for promotional purposes on social media (e.g., Instagram).</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Starter Packs:</span> The use of your card in physical "Starter Packs" (randomized card sets) produced by Joker and distributed at events or via mail. This consent remains valid even if BoneBattle is later registered as a formal business.</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-100 mb-1">3. Online Game &amp; Database – Optional Opt-In</p>
+                <p>You decide for yourself whether your data will also be processed in the online version of BoneBattle. Without explicit consent, your card will remain a physical collectible only.</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-100 mb-1">4. Design Protection &amp; Integrity</p>
+                <p><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Prohibition of Changes:</span> It is not permitted to independently modify or manipulate the BoneBattle card design (content, layout, typography, graphics, etc.).</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Printing Rights:</span> You are authorized to print the card finalized by Joker for private purposes. This authorization expires automatically upon revocation of this consent.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Update Service:</span> Changes to data or images are made exclusively by Joker. Official update windows (approx. 2× per year) will be offered for this purpose.</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-100 mb-1">5. Revocation &amp; Data Privacy</p>
+                <p><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Right of Revocation:</span> You may revoke this consent at any time with effect for the future. In the event of a revocation, your card will be deleted from the online system and removed from future print runs of the Starter Packs. Physical cards already produced or distributed are excluded from the revocation.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Data Minimization:</span> Your data will be used exclusively for the purposes stated above and will not be passed on to uninvolved third parties.</p>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Mandatory consent checkbox */}
+          <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.termsConsent ? 'bg-red-900/20 border-red-500/50' : 'bg-indigo-900/20 border-indigo-500/30'}`}>
             <input
               type="checkbox"
-              id="consent-main"
-              checked={card.consent}
-              onChange={(e) => handleChange('consent', e.target.checked)}
+              id="consent-terms"
+              checked={card.termsConsent}
+              onChange={(e) => handleChange('termsConsent', e.target.checked)}
               required
-              className="mt-1 cursor-pointer w-5 h-5 accent-blue-500"
+              className="mt-0.5 cursor-pointer w-5 h-5 accent-indigo-500 shrink-0"
             />
-            <label htmlFor="consent-main" className="text-sm text-blue-200 cursor-pointer">
-              <span className="text-red-400">*</span> I give permission for using my image and information to create and promote this card for Bone Battle.
+            <label htmlFor="consent-terms" className="text-sm text-indigo-200 cursor-pointer">
+              <span className="text-red-400">*</span> I have read and agree to the <span className="font-semibold text-indigo-300">BoneBattle Terms of Use</span>, including sections 1–2 (image rights &amp; basic consent) and sections 4–5 (design protection &amp; data privacy).
             </label>
           </div>
 
-          <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.decisionConsent ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/30'
-            }`}>
+          {/* Optional opt-ins — Section 3 */}
+          <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Section 3 – Online Game Opt-Ins <span className="text-slate-500 normal-case font-normal">(optional)</span></p>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={card.isCollectable ?? false}
+                onChange={(e) => handleChange('isCollectable', e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-indigo-500 shrink-0"
+              />
+              <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+                <span className="font-medium text-slate-200">Collectable</span> — My card may be displayed in the public online gallery/collection.
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={card.isOnlinePlayable ?? false}
+                onChange={(e) => handleChange('isOnlinePlayable', e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-indigo-500 shrink-0"
+              />
+              <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+                <span className="font-medium text-slate-200">Online Playable</span> — My card may be used actively in online battles and leaderboards.
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={card.isAllowTrades ?? false}
+                onChange={(e) => handleChange('isAllowTrades', e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-indigo-500 shrink-0"
+              />
+              <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+                <span className="font-medium text-slate-200">Tradeable</span> — My card may be used for digital trade requests between users.
+              </span>
+            </label>
+          </div>
+
+          {/* Creator decision consent */}
+          <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.decisionConsent ? 'bg-red-900/20 border-red-500/50' : 'bg-slate-800/40 border-slate-600/50'}`}>
             <input
               type="checkbox"
               id="consent-preview"
               checked={card.decisionConsent}
               onChange={(e) => handleChange('decisionConsent', e.target.checked)}
               required
-              className="mt-1 cursor-pointer w-5 h-5 accent-blue-500"
+              className="mt-0.5 cursor-pointer w-5 h-5 accent-indigo-500 shrink-0"
             />
-            <label htmlFor="consent-preview" className="text-sm text-blue-200 cursor-pointer">
-              <span className="text-red-400">*</span> I accept that this is a preview of the card and the creator (joker.pup.jx) has the final decision on the positioning of elements.
+            <label htmlFor="consent-preview" className="text-sm text-slate-300 cursor-pointer">
+              <span className="text-red-400">*</span> I accept that this is a preview of the card and the creator (<span className="font-medium text-slate-200">joker.pup.jx</span>) has the final decision on the positioning of elements.
             </label>
           </div>
+
         </div>
       </div>
 

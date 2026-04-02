@@ -38,8 +38,11 @@ export interface CardData {
   shoeSize: string; // Stored as formatted string "44.5EU / 11.5US"
   socialLink: string;
   country: string; // 2 letter code preferably
-  consent: boolean;
+  termsConsent: boolean;
   decisionConsent: boolean;
+  isCollectable?: boolean;
+  isOnlinePlayable?: boolean;
+  isAllowTrades?: boolean;
   namePosition: CardPosition;
   statsPosition: CardPosition;
   dogTricksPermission: boolean;

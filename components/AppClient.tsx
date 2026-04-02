@@ -121,7 +121,8 @@ const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number):
 const INITIAL_CARD: CardData = {
     name: '', hoodColor: HoodColor.RED, imageUrl: '',
     birthdate: '', height: '', shoeSize: '', socialLink: '', country: '',
-    consent: false, decisionConsent: false,
+    termsConsent: false, decisionConsent: false,
+    isCollectable: false, isOnlinePlayable: false, isAllowTrades: false,
     namePosition: 'left-top', statsPosition: 'right-middle',
     dogTricksPermission: false, dogTricks: [],
     imageZoom: 1, imagePosition: { x: 0, y: 0 },
@@ -198,7 +199,7 @@ export default function AppClient() {
         return (
             fields.every((f) => f && f.trim() !== '') &&
             /^\d{4}\.\d{2}$/.test(card.birthdate) &&
-            card.consent && card.decisionConsent &&
+            card.termsConsent && card.decisionConsent &&
             (rawBones >= 50 || tricksMakeUpShortfall) && rawBones <= 70
         );
     };
@@ -302,6 +303,9 @@ export default function AppClient() {
             is_published: false,
             is_torn: false,
             is_sample: false,
+            is_collectable_only: card.isCollectable ?? false,
+            is_online_playable: card.isOnlinePlayable ?? false,
+            allow_trades: card.isAllowTrades ?? false,
         }, null, 2);
     };
 
