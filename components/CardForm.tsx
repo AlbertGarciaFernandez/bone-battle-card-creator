@@ -932,9 +932,12 @@ const CardForm: React.FC<CardFormProps> = ({
             <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
               How to contact you
             </label>
+            <p className="text-[10px] text-purple-400 mb-2">
+              We prefer Instagram — Telegram only if you don't have Instagram.
+            </p>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${contactPlatform === 'instagram' ? 'bg-purple-900/30 border-purple-500/60' : 'bg-slate-900 border-slate-700 hover:bg-slate-800'}`}>
                   <input
                     type="radio"
                     name="contactPlatform"
@@ -944,8 +947,9 @@ const CardForm: React.FC<CardFormProps> = ({
                   />
                   <Instagram size={14} className="text-purple-400" />
                   <span className="text-xs text-slate-300 font-bold">Instagram</span>
+                  <span className="text-[10px] text-purple-400 font-semibold">Preferred</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors ${contactPlatform === 'telegram' ? 'bg-sky-900/30 border-sky-500/60' : 'bg-slate-900 border-slate-700 hover:bg-slate-800'}`}>
                   <input
                     type="radio"
                     name="contactPlatform"
@@ -958,13 +962,16 @@ const CardForm: React.FC<CardFormProps> = ({
                 </label>
               </div>
               {contactPlatform === 'telegram' && (
-                <input
-                  type="text"
-                  placeholder="@telegram_username"
-                  value={card.telegramHandle || ''}
-                  onChange={(e) => handleChange('telegramHandle', e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 focus:outline-none"
-                />
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    placeholder="@telegram_username"
+                    value={card.telegramHandle || ''}
+                    onChange={(e) => handleChange('telegramHandle', e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 focus:outline-none"
+                  />
+                  <p className="text-[10px] text-sky-500/70">Only if you really don't have Instagram.</p>
+                </div>
               )}
             </div>
           </div>

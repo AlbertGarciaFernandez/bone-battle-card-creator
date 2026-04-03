@@ -152,21 +152,20 @@ const modalReducer = (state: ModalState, action: ModalAction): ModalState => {
 
 // ─── Send-flow reducer ────────────────────────────────────────────────────────
 
-type SendState = { newsletter: boolean; isSending: boolean; status: 'idle' | 'sending' | 'success' | 'error'; error: string | null };
+type SendState = { isSending: boolean; status: 'idle' | 'sending' | 'success' | 'error'; error: string | null };
 type SendAction =
     | { type: 'START' } | { type: 'SUCCESS' }
     | { type: 'ERROR'; error: string } | { type: 'CLEAR_ERROR' }
-    | { type: 'RESET_STATUS' } | { type: 'TOGGLE_NEWSLETTER' };
+    | { type: 'RESET_STATUS' };
 
 const sendReducer = (state: SendState, action: SendAction): SendState => {
     switch (action.type) {
-        case 'START':             return { ...state, isSending: true, status: 'sending', error: null };
-        case 'SUCCESS':           return { ...state, isSending: false, status: 'success' };
-        case 'ERROR':             return { ...state, isSending: false, status: 'error', error: action.error };
-        case 'CLEAR_ERROR':       return { ...state, status: 'idle', error: null };
-        case 'RESET_STATUS':      return { ...state, status: 'idle' };
-        case 'TOGGLE_NEWSLETTER': return { ...state, newsletter: !state.newsletter };
-        default:                  return state;
+        case 'START':        return { ...state, isSending: true, status: 'sending', error: null };
+        case 'SUCCESS':      return { ...state, isSending: false, status: 'success' };
+        case 'ERROR':        return { ...state, isSending: false, status: 'error', error: action.error };
+        case 'CLEAR_ERROR':  return { ...state, status: 'idle', error: null };
+        case 'RESET_STATUS': return { ...state, status: 'idle' };
+        default:             return state;
     }
 };
 
@@ -179,7 +178,7 @@ export default function AppClient() {
         showSend: false, showSupport: false, showGuide: false, guideTab: 'basics' as const,
     });
     const [sendState, dispatchSend] = useReducer(sendReducer, {
-        newsletter: false, isSending: false, status: 'idle' as const, error: null,
+        isSending: false, status: 'idle' as const, error: null,
     });
 
     const isIOS = useMemo(() => {
@@ -357,7 +356,7 @@ export default function AppClient() {
             if (!originalBlob && !cardCaptureBlob) throw new Error('Could not process your image. Please try a different photo.');
 
             const { imageUrl: _excluded, ...cardWithoutImage } = card;
-            const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), newsletter: sendState.newsletter, captureFailed: !cardCaptureBlob });
+            const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), captureFailed: !cardCaptureBlob });
             const textPart = getPhotoshopTXTContent();
             const csvPart = getCSVContent();
             const schemaJsonPart = getCardSchemaJSON();
@@ -421,7 +420,7 @@ export default function AppClient() {
             <GameGuideModal isOpen={modals.showGuide} onClose={() => dispatchModal({ type: 'CLOSE_GUIDE' })} initialTab={modals.guideTab} />
             <SendModal
                 isOpen={modals.showSend} onClose={() => dispatchModal({ type: 'CLOSE_SEND' })}
-                newsletter={sendState.newsletter} onNewsletterChange={() => dispatchSend({ type: 'TOGGLE_NEWSLETTER' })}
+                contactPlatform={card.contactPlatform} telegramHandle={card.telegramHandle}
                 submitStatus={sendState.status} sendError={sendState.error}
                 isSending={sendState.isSending} isSendDisabled={isSendDisabled}
                 onSubmit={handleFinalizeSend} onClearError={() => dispatchSend({ type: 'CLEAR_ERROR' })}

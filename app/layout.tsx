@@ -9,6 +9,10 @@ const cinzel = Cinzel({ subsets: ['latin'], variable: '--font-cinzel' });
 export const metadata: Metadata = {
   title: 'Bone Battle Creator',
   description: 'Create your Bone Battle TCG cards',
+  icons: {
+    icon: '/bb_logo_t.png',
+    apple: '/bb_logo_t.png',
+  },
 };
 
 export default function RootLayout({

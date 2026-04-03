@@ -2,14 +2,14 @@
 
 import React from 'react';
 import {
-    X, Instagram, Loader2, CheckCircle, AlertCircle, Send, MessageCircle
+    X, Instagram, Loader2, CheckCircle, AlertCircle, Send, MessageCircle, ShieldAlert
 } from 'lucide-react';
 
 interface SendModalProps {
     isOpen: boolean;
     onClose: () => void;
-    newsletter: boolean;
-    onNewsletterChange: (v: boolean) => void;
+    contactPlatform?: 'instagram' | 'telegram';
+    telegramHandle?: string;
     submitStatus: 'idle' | 'sending' | 'success' | 'error';
     sendError: string | null;
     isSending: boolean;
@@ -19,9 +19,11 @@ interface SendModalProps {
 }
 
 export default function SendModal({
-    isOpen, onClose, newsletter, onNewsletterChange,
+    isOpen, onClose, contactPlatform = 'instagram', telegramHandle,
     submitStatus, sendError, isSending, isSendDisabled, onSubmit, onClearError,
 }: SendModalProps) {
+    const isTelegram = contactPlatform === 'telegram';
+    const tgHandle = (telegramHandle || '').replace(/^@/, '');
     if (!isOpen) return null;
 
     return (
@@ -36,7 +38,7 @@ export default function SendModal({
                 <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
                     <div>
                         <h2 id="send-modal-title" className="text-xl font-bold text-white font-display">Before You Send...</h2>
-                        <p className="text-sm text-slate-400">Join the pack and support the project!</p>
+                        <p className="text-sm text-slate-400">Read this carefully before submitting your card.</p>
                     </div>
                     <button
                         type="button"
@@ -49,41 +51,85 @@ export default function SendModal({
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-8">
-                    {/* Socials */}
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-purple-600/20 p-2 rounded-lg text-purple-400">
-                                    <Instagram size={20} />
-                                </div>
-                                <div className="text-sm">
-                                    <p className="font-bold text-white">Follow us!</p>
-                                    <p className="text-slate-400 text-xs">Stay updated on new cards &amp; events.</p>
-                                </div>
+                <div className="p-6 space-y-6">
+
+                    {/* ── VERIFICATION WARNING — high visibility ── */}
+                    <div className="relative rounded-xl border-2 border-amber-500 bg-amber-950/40 p-5 shadow-[0_0_24px_rgba(245,158,11,0.2)]">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="bg-amber-500/20 p-2 rounded-lg text-amber-400 shrink-0">
+                                <ShieldAlert size={22} />
                             </div>
-                            <div className="flex gap-2 flex-wrap">
-                                <a href="https://instagram.com/joker.pup.jx" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">@joker.pup.jx</a>
-                                <a href="https://instagram.com/bonebattlecards" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">@bonebattlecards</a>
-                                <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">@pup.hunter071</a>
-                            </div>
+                            <p className="font-bold text-amber-300 text-base uppercase tracking-wide">Verification Required</p>
                         </div>
 
-                        <label
-                            aria-label="Subscribe to Newsletter"
-                            className="flex items-start gap-3 p-4 rounded-xl border border-slate-700 hover:bg-slate-800/50 cursor-pointer transition-colors"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={newsletter}
-                                onChange={(e) => onNewsletterChange(e.target.checked)}
-                                className="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500"
-                            />
-                            <div>
-                                <span className="block text-sm font-bold text-white">Subscribe to Newsletter</span>
-                                <span className="block text-xs text-slate-400">Get the latest news about Bone Battle and related projects.</span>
+                        {isTelegram ? (
+                            <>
+                                <p className="text-amber-100 text-sm leading-relaxed mb-4">
+                                    After submitting, you <span className="font-bold text-white">must</span> message{' '}
+                                    <a
+                                        href="https://t.me/just_joker_jx"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-bold text-sky-300 underline underline-offset-2 hover:text-white transition-colors"
+                                    >
+                                        @just_joker_jx
+                                    </a>{' '}
+                                    on Telegram to confirm that <span className="font-bold text-white">this is really your request, for your own card</span>.
+                                    Requests without verification will not be processed.
+                                </p>
+                                <a
+                                    href={`https://t.me/just_joker_jx${tgHandle ? `?start=${tgHandle}` : ''}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm px-5 py-2.5 rounded-lg transition-colors shadow-lg"
+                                >
+                                    ✈ Message @just_joker_jx on Telegram
+                                </a>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-amber-100 text-sm leading-relaxed mb-4">
+                                    After submitting, you <span className="font-bold text-white">must</span> send a DM to{' '}
+                                    <a
+                                        href="https://instagram.com/joker.pup.jx"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-bold text-amber-300 underline underline-offset-2 hover:text-white transition-colors"
+                                    >
+                                        @joker.pup.jx
+                                    </a>{' '}
+                                    on Instagram to confirm that <span className="font-bold text-white">this is really your request, for your own card</span>.
+                                    Requests without verification will not be processed.
+                                </p>
+                                <a
+                                    href="https://ig.me/m/joker.pup.jx"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm px-5 py-2.5 rounded-lg transition-colors shadow-lg"
+                                >
+                                    <Instagram size={16} />
+                                    DM @joker.pup.jx on Instagram
+                                </a>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Socials */}
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-purple-600/20 p-2 rounded-lg text-purple-400">
+                                <Instagram size={20} />
                             </div>
-                        </label>
+                            <div className="text-sm">
+                                <p className="font-bold text-white">Follow us!</p>
+                                <p className="text-slate-400 text-xs">Stay updated on new cards &amp; events.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                            <a href="https://instagram.com/joker.pup.jx" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">@joker.pup.jx</a>
+                            <a href="https://instagram.com/bonebattlecards" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">@bonebattlecards</a>
+                            <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">@pup.hunter071</a>
+                        </div>
                     </div>
 
                     {/* What's Next */}
@@ -92,19 +138,27 @@ export default function SendModal({
                             <CheckCircle size={18} />
                             <h3 className="font-bold uppercase text-sm tracking-wider">{"What's Next?"}</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-800">
-                                <p className="text-xs text-slate-300 mb-1 font-bold">1. Screenshot</p>
-                                <p className="text-xs text-slate-400">Did you take a screenshot of your card? You will need it.</p>
+                                <p className="text-xs text-slate-300 mb-1 font-bold">1. Submit</p>
+                                <p className="text-xs text-slate-400">Hit Send Request below to submit your card data.</p>
                             </div>
                             <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-800">
-                                <p className="text-xs text-slate-300 mb-1 font-bold">2. Confirm</p>
-                                <p className="text-xs text-slate-400">Confirm with Joker on Instagram that you have sent your request along with the screenshot.</p>
+                                <p className="text-xs text-slate-300 mb-1 font-bold">2. Screenshot</p>
+                                <p className="text-xs text-slate-400">Take a screenshot of your card preview to send along.</p>
+                            </div>
+                            <div className="bg-amber-950/30 p-3 rounded-lg border border-amber-700/40">
+                                <p className="text-xs text-amber-300 mb-1 font-bold">3. Contact Joker ⚠️</p>
+                                {isTelegram ? (
+                                    <p className="text-xs text-slate-400">Message <span className="text-sky-300 font-medium">@just_joker_jx</span> on Telegram with your screenshot to verify it's your request.</p>
+                                ) : (
+                                    <p className="text-xs text-slate-400">DM <span className="text-amber-300 font-medium">@joker.pup.jx</span> on Instagram with your screenshot to verify it's your request.</p>
+                                )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-4 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
                             <MessageCircle size={14} />
-                            <span>Any suggestions to improve? Contact <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white underline">Hunter</a>.</span>
+                            <span>Any suggestions? Contact <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white underline">Hunter</a>.</span>
                         </div>
                     </div>
 
@@ -122,6 +176,34 @@ export default function SendModal({
                                 <CheckCircle className="w-10 h-10 text-green-500 mb-4" />
                                 <p className="text-green-200 font-bold text-center uppercase tracking-wider">Form Submitted Successfully!</p>
                                 <p className="text-green-400/60 text-xs mt-1 text-center">Your files have been downloaded as a backup.</p>
+                            </div>
+                            <div className={`rounded-xl border-2 p-4 text-center ${isTelegram ? 'border-sky-500 bg-sky-950/40' : 'border-amber-500 bg-amber-950/40'}`}>
+                                {isTelegram ? (
+                                    <>
+                                        <p className="text-sky-200 font-bold text-sm mb-2">Now message @just_joker_jx on Telegram to verify!</p>
+                                        <a
+                                            href="https://t.me/just_joker_jx"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm px-5 py-2.5 rounded-lg transition-colors"
+                                        >
+                                            ✈ Open Telegram
+                                        </a>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-amber-200 font-bold text-sm mb-2">Now DM @joker.pup.jx on Instagram to verify!</p>
+                                        <a
+                                            href="https://ig.me/m/joker.pup.jx"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm px-5 py-2.5 rounded-lg transition-colors"
+                                        >
+                                            <Instagram size={16} />
+                                            Open Instagram DM
+                                        </a>
+                                    </>
+                                )}
                             </div>
                             <p className="text-center text-slate-400 text-sm animate-pulse">Closing this window and opening support options...</p>
                         </div>
