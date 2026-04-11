@@ -340,10 +340,11 @@ const CardForm: React.FC<CardFormProps> = ({
     handleChange('socialPlatform', socialPlatform);
   }, [socialPlatform]);
 
-  // Sync contact platform; clear telegram handle when switching to instagram
+  // Sync contact platform; clear telegram handle when switching to instagram, clear instagram handle when switching to telegram
   useEffect(() => {
     handleChange('contactPlatform', contactPlatform);
     if (contactPlatform === 'instagram') handleChange('telegramHandle', '');
+    if (contactPlatform === 'telegram') handleChange('instagramHandle', '');
   }, [contactPlatform]);
 
   const handleMatrixChange = (category: 'gear' | 'kinks', key: string, value: number) => {
@@ -550,7 +551,7 @@ const CardForm: React.FC<CardFormProps> = ({
               />
               {!card.name && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required field</p>}
               <p className="text-[11px] text-slate-500 mt-1 italic">
-                Don't have a name? Ask your alpha, followers or friends to help find one!
+                Just the name — e.g. 'Joker', not 'Pup Joker' or 'Pup Joker NL'. No prefix or suffix.
               </p>
             </div>
             <div>
@@ -971,6 +972,18 @@ const CardForm: React.FC<CardFormProps> = ({
                     className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 focus:outline-none"
                   />
                   <p className="text-[10px] text-sky-500/70">Only if you really don't have Instagram.</p>
+                </div>
+              )}
+              {contactPlatform === 'instagram' && socialPlatform === 'other' && (
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    placeholder="@instagram_username"
+                    value={card.instagramHandle || ''}
+                    onChange={(e) => handleChange('instagramHandle', e.target.value)}
+                    className="w-full bg-slate-900 border border-purple-700/60 rounded-md px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-purple-400 focus:outline-none"
+                  />
+                  <p className="text-[10px] text-purple-500/70">Your Linktree is set as social — enter your Instagram so we can contact you.</p>
                 </div>
               )}
             </div>

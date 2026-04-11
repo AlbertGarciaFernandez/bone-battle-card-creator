@@ -54,6 +54,7 @@ export interface CardData {
   socialPlatform?: 'instagram' | 'other';
   contactPlatform?: 'instagram' | 'telegram';
   telegramHandle?: string;
+  instagramHandle?: string; // Only used when socialPlatform is 'other' + contactPlatform is 'instagram'
 }
 
 export interface AIServiceResponse {

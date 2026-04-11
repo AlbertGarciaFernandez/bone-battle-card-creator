@@ -109,7 +109,7 @@ export default function SupportModal({ isOpen, onClose, onDeveloperSupport }: Su
                                         </button>
                                     </div>
                                     <p className="text-xs text-blue-200/70 leading-relaxed font-medium">
-                                        Support our developer so we can release the <strong className="text-blue-100 underline decoration-blue-500/50">Collectible Card Album App</strong> even faster!
+                                        Support our developer so we can mantain updated and release new features for free! Every bit of support helps us keep the project alive and growing, and we truly appreciate it! ^^
                                     </p>
                                 </div>
                             </li>

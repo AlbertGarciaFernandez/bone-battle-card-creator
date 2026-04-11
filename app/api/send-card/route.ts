@@ -139,13 +139,18 @@ export async function POST(req: Request) {
                &nbsp;<a href="http://ig.me/m/${igUsername}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
             : `${esc(card.socialLink)} (${esc(platform)})`;
 
-        // ── Contact preference (Telegram) ─────────────────────────────────────
+        // ── Contact preference (Telegram or Instagram handle when social is Linktree) ──────────────
         const contactPlatform = card.contactPlatform || 'instagram';
         const isTelegram = contactPlatform === 'telegram';
+        const isInstagramContact = contactPlatform === 'instagram' && (card.socialPlatform || 'instagram') !== 'instagram';
         const telegramHandle = isTelegram ? String(card.telegramHandle || '').trim().replace(/^@/, '') : '';
+        const igContactHandle = isInstagramContact ? extractIgUsername(String(card.instagramHandle || '')) : '';
         const contactHtml = isTelegram && telegramHandle
             ? `<a href="https://t.me/${telegramHandle}" style="color:#38bdf8;text-decoration:none;">@${esc(telegramHandle)}</a>
                &nbsp;<a href="https://t.me/${telegramHandle}" style="display:inline-block;margin-left:8px;background:#0088cc;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">✈️ Message on Telegram</a>`
+            : isInstagramContact && igContactHandle
+            ? `<a href="http://ig.me/m/${igContactHandle}" style="color:#818cf8;text-decoration:none;">@${esc(igContactHandle)}</a>
+               &nbsp;<a href="http://ig.me/m/${igContactHandle}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
             : '';
 
         // ── Email HTML ────────────────────────────────────────────────────────

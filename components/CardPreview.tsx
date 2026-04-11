@@ -123,9 +123,16 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
           <img
             src={imageUrl}
             alt={name}
-            className="w-full h-full object-cover transition-transform duration-200"
+            className="absolute transition-all duration-200"
             style={{
-              transform: `scale(${data.imageZoom || 1}) translate(${(data.imagePosition?.x || 0)}%, ${(data.imagePosition?.y || 0)}%)`
+              width: 'auto',
+              height: 'auto',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              top: '50%',
+              left: '50%',
+              transform: `translate(calc(-50% + ${(data.imagePosition?.x || 0) * 0.5}%), calc(-50% + ${(data.imagePosition?.y || 0) * 0.5}%)) scale(${data.imageZoom || 1})`,
+              transformOrigin: 'center center'
             }}
           />
         ) : (
