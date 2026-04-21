@@ -131,13 +131,14 @@ export async function POST(req: Request) {
           </div>` : '';
 
         // ── Social link ───────────────────────────────────────────────────────
-        const platform = card.socialPlatform || 'Instagram';
+        // card.socialLink is the unified internal field; card.socialPlatform tells us how to display it
+        const platform = card.socialPlatform || 'instagram';
         const isInstagram = platform.toLowerCase() === 'instagram';
         const igUsername = isInstagram ? extractIgUsername(card.socialLink) : '';
         const socialHtml = isInstagram
             ? `<a href="http://ig.me/m/${igUsername}" style="color:#818cf8;text-decoration:none;">@${esc(igUsername)}</a>
                &nbsp;<a href="http://ig.me/m/${igUsername}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
-            : `${esc(card.socialLink)} (${esc(platform)})`;
+            : `${esc(card.socialLink)} (linktr.ee)`;
 
         // ── Contact preference (Telegram or Instagram handle when social is Linktree) ──────────────
         const contactPlatform = card.contactPlatform || 'instagram';
@@ -212,13 +213,16 @@ export async function POST(req: Request) {
             try {
                 const parsedCard = JSON.parse(cardSchemaJSON);
                 const headers = { 'api_key': appApiKey, 'Content-Type': 'application/json' };
+                // instaUsername is set when socialPlatform is 'instagram'; social_link when 'other'.
+                // Base44 always expects the field as social_link regardless of platform.
+                const schemaIsInstagram = parsedCard.instaUsername !== undefined;
                 const payload: Record<string, unknown> = {
                     name: parsedCard.name ?? '',
                     color: parsedCard.color ?? null,
                     pawsday: parsedCard.pawsday ?? null,
                     height: parsedCard.height ?? null,
                     shoe_size: parsedCard.shoe_size ?? null,
-                    social_link: parsedCard.social_link ?? null,
+                    social_link: parsedCard.instaUsername ?? parsedCard.social_link ?? null,
                     country: countryCodeToEmoji(parsedCard.country),
                     gear: parsedCard.gear ?? {},
                     kinks: parsedCard.kinks ?? {},

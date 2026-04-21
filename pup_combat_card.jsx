@@ -53,7 +53,10 @@ var jsonSkipBtn = jsonBtnGrp.add("button", undefined, "Skip", {name: "cancel"});
 jsonLoadBtn.onClick = function() {
     try {
         var raw = jsonInput.text.replace(/[\r\n]/g, "");
-        var d = eval("(" + raw + ")");
+        var d = JSON.parse(raw);
+        if (typeof d !== 'object' || d === null || Array.isArray(d)) {
+            throw new Error('JSON must be an object');
+        }
 
         if (d.id            !== undefined) initialID  = String(d.id);
         if (d.name          !== undefined) pupName    = String(d.name);
@@ -92,11 +95,17 @@ jsonLoadBtn.onClick = function() {
             if (_cf) initialFlag = _cf;
         }
 
-        // socialLink: manual uses "socialLink", app export uses "social_link"
-        if (d.socialLink   !== undefined) { socialLink = String(d.socialLink); }
-        else if (d.social_link !== undefined) { socialLink = String(d.social_link); }
-
-        if (d.instaUsername !== undefined) instaUsername = String(d.instaUsername);
+        // instaUsername is the primary social variable (used on card + JSON).
+        // socialLink (linktr.ee/...) is only the fallback when instaUsername is absent.
+        if (d.instaUsername !== undefined) {
+            instaUsername = String(d.instaUsername);
+        } else if (d.insta_username !== undefined) {
+            instaUsername = String(d.insta_username);
+        } else {
+            // No instaUsername — load socialLink as linktr.ee fallback
+            if (d.socialLink    !== undefined) { socialLink = String(d.socialLink); }
+            else if (d.social_link !== undefined) { socialLink = String(d.social_link); }
+        }
 
         var g = d.gear || {};
         if (g.rubber     !== undefined) pRubber  = String(g.rubber);

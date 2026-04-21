@@ -386,18 +386,20 @@ const CardForm: React.FC<CardFormProps> = ({
   const missingBones = Math.max(0, 50 - totalBones);
   const requiredTricks = Math.ceil(missingBones / 4);
 
-  // Height Conversion Logic
-  const updateHeightFromCm = (val: string) => {
-    if (val.length > 5) return;
+  // Height Conversion Logic — metrics in meters (e.g., 1.78m)
+  const updateHeightFromM = (val: string) => {
+    // Accept up to 4 chars: "X.XXm" format
+    if (val.length > 4) return;
     setCm(val);
     const numM = parseFloat(val);
     if (!isNaN(numM) && numM > 0) {
-      const totalInches = (numM * 100) / 2.54; // Convert meters to cm, then to inches
+      // Convert meters to inches: meters * 100 (to cm) / 2.54 (cm per inch)
+      const totalInches = (numM * 100) / 2.54;
       const f = Math.floor(totalInches / 12);
       const i = Math.round(totalInches % 12);
       setFt(f.toString());
       setInch(i.toString());
-      handleChange('height', `${val}cm / ${f}'${i}"`);
+      handleChange('height', `${val}m / ${f}'${i}"`);
     } else {
       setFt('');
       setInch('');
@@ -423,14 +425,17 @@ const CardForm: React.FC<CardFormProps> = ({
     }
   };
 
-  // Shoe Conversion Logic — lookup table based on Wikipedia shoe size table
+  // Shoe Conversion Logic — lookup table based on Wikipedia ISO 19407 shoe size standard
+  // https://en.wikipedia.org/wiki/Shoe_size#ISO_19407_and_shoe_size_conversion
   const EU_TO_US: Record<number, number> = {
-    35: 3, 35.5: 3.5, 36: 4, 36.5: 4.5,
-    37: 5, 37.5: 5.5, 38: 6, 38.5: 6.5,
-    39: 7, 40: 7.5, 40.5: 8, 41: 8.5,
-    42: 9, 42.5: 9.5, 43: 10, 44: 10.5,
-    44.5: 11, 45: 11.5, 45.5: 12, 46: 12.5,
-    47: 13, 48: 14, 49: 15
+    34: 3, 34.5: 3.5, 35: 4, 35.5: 4.5,
+    36: 5, 36.5: 5.5, 37: 6, 37.5: 6.5,
+    38: 7, 38.5: 7.5, 39: 8, 39.5: 8.5,
+    40: 9, 40.5: 9.5, 41: 10, 41.5: 10.5,
+    42: 11, 42.5: 11.5, 43: 12, 43.5: 12.5,
+    44: 13, 44.5: 13.5, 45: 14, 45.5: 14.5,
+    46: 15, 46.5: 15.5, 47: 16, 47.5: 16.5,
+    48: 17, 49: 18
   };
   const US_TO_EU: Record<number, number> = Object.fromEntries(
     Object.entries(EU_TO_US).map(([eu, us]) => [us, parseFloat(eu)])
@@ -535,11 +540,13 @@ const CardForm: React.FC<CardFormProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
+              <label htmlFor="pupName" className="block text-xs font-medium text-slate-400 mb-1">
                 Pup Name <span className="text-red-400">*</span>
               </label>
               <input
+                id="pupName"
                 type="text"
+                autoComplete="off"
                 value={card.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 required
@@ -555,10 +562,12 @@ const CardForm: React.FC<CardFormProps> = ({
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
+              <label htmlFor="hoodColor" className="block text-xs font-medium text-slate-400 mb-1">
                 Hood Color <span className="text-red-400">*</span>
               </label>
               <select
+                id="hoodColor"
+                autoComplete="off"
                 value={card.hoodColor}
                 onChange={(e) => handleChange('hoodColor', e.target.value)}
                 required
@@ -605,13 +614,14 @@ const CardForm: React.FC<CardFormProps> = ({
                   <div className="flex flex-col gap-4">
                     {/* Zoom Slider */}
                     <div>
-                      <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                      <label htmlFor="imageZoomSlider" className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
                         <span>ZOOM</span>
                         <span className="text-bone-400">{Math.round((card.imageZoom || 1) * 100)}%</span>
-                      </div>
+                      </label>
                       <input
+                        id="imageZoomSlider"
                         type="range"
-                        min="0.5"
+                        min="1"
                         max="4"
                         step="0.01"
                         value={card.imageZoom || 1}
@@ -623,11 +633,12 @@ const CardForm: React.FC<CardFormProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       {/* X Position */}
                       <div>
-                        <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                        <label htmlFor="imagePosX" className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
                           <span>POS X</span>
                           <span className="text-bone-400">{(card.imagePosition?.x || 0)}%</span>
-                        </div>
+                        </label>
                         <input
+                          id="imagePosX"
                           type="range"
                           min="-100"
                           max="100"
@@ -640,11 +651,12 @@ const CardForm: React.FC<CardFormProps> = ({
 
                       {/* Y Position */}
                       <div>
-                        <div className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
+                        <label htmlFor="imagePosY" className="flex justify-between text-[10px] text-slate-500 mb-1.5 font-bold">
                           <span>POS Y</span>
                           <span className="text-bone-400">{(card.imagePosition?.y || 0)}%</span>
-                        </div>
+                        </label>
                         <input
+                          id="imagePosY"
                           type="range"
                           min="-100"
                           max="100"
@@ -661,13 +673,15 @@ const CardForm: React.FC<CardFormProps> = ({
 
               {/* Upload Image Section - Moved right below Crop & Position */}
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 shadow-inner">
-                <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">
+                <label htmlFor="imageUrl" className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">
                   1. Choose Your Image <span className="text-red-400">*</span>
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <input
+                      id="imageUrl"
                       type="url"
+                      autoComplete="off"
                       placeholder="Paste Image URL..."
                       value={card.imageUrl || ''}
                       onChange={(e) => handleChange('imageUrl', e.target.value)}
@@ -678,10 +692,10 @@ const CardForm: React.FC<CardFormProps> = ({
                     {!card.imageUrl && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Please upload or paste an image</p>}
                   </div>
                   <div className="flex gap-2">
-                    <label className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-bone-200 sm:px-3 px-5 sm:py-1.5 py-3 rounded-lg cursor-pointer border border-slate-600 flex items-center justify-center gap-2 transition-all active:scale-95 group" title="Upload Image">
+                    <label htmlFor="imageFileUpload" className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-bone-200 sm:px-3 px-5 sm:py-1.5 py-3 rounded-lg cursor-pointer border border-slate-600 flex items-center justify-center gap-2 transition-all active:scale-95 group" title="Upload Image">
                       <Upload size={16} className="group-hover:translate-y-[-1px] transition-transform" />
                       <span className="text-xs font-bold uppercase tracking-tight sm:hidden">Upload</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      <input id="imageFileUpload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </label>
                   </div>
                 </div>
@@ -695,8 +709,10 @@ const CardForm: React.FC<CardFormProps> = ({
           {/* Layout Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
             <div>
-              <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">Name Position</label>
+              <label htmlFor="namePosition" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">Name Position</label>
               <select
+                id="namePosition"
+                autoComplete="off"
                 value={card.namePosition}
                 onChange={(e) => handleChange('namePosition', e.target.value as CardPosition)}
                 className="w-full bg-slate-950 border border-slate-600 rounded px-2 py-1.5 text-xs text-white focus:border-bone-400 outline-none"
@@ -705,8 +721,10 @@ const CardForm: React.FC<CardFormProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">Stats Position</label>
+              <label htmlFor="statsPosition" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">Stats Position</label>
               <select
+                id="statsPosition"
+                autoComplete="off"
                 value={card.statsPosition}
                 onChange={(e) => handleChange('statsPosition', e.target.value)}
                 className="w-full bg-slate-950 border border-slate-600 rounded px-2 py-1.5 text-xs text-white focus:border-bone-400 outline-none"
@@ -721,20 +739,22 @@ const CardForm: React.FC<CardFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Height Inputs                 */}
             <div className={`bg-slate-900/50 p-4 rounded-lg border ${!card.height ? 'border-red-500/50' : 'border-slate-700'}`}>
-              <label className="block text-xs font-medium text-slate-400 mb-3 uppercase">
-                Height <span className="text-red-400">*</span>
+              <label htmlFor="heightMeters" className="block text-xs font-medium text-slate-400 mb-3 uppercase">
+                Height (Meters) <span className="text-red-400">*</span>
               </label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 w-12">Meters:</span>
                   <input
+                    id="heightMeters"
                     type="number"
+                    autoComplete="off"
                     placeholder="1.78"
                     step="0.01"
                     min="1.00"
                     max="2.50"
                     value={cm}
-                    onChange={(e) => updateHeightFromCm(e.target.value)}
+                    onChange={(e) => updateHeightFromM(e.target.value)}
                     required
                     className={`flex-1 bg-slate-950 border rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none ${!cm || parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
                   />
@@ -749,7 +769,9 @@ const CardForm: React.FC<CardFormProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 w-12">Feet:</span>
                   <input
+                    id="heightFeet"
                     type="number"
+                    autoComplete="off"
                     placeholder="5"
                     min="3"
                     max="8"
@@ -759,7 +781,9 @@ const CardForm: React.FC<CardFormProps> = ({
                   />
                   <span className="text-sm text-slate-500">ft</span>
                   <input
+                    id="heightInches"
                     type="number"
+                    autoComplete="off"
                     placeholder="10"
                     min="0"
                     max="11"
@@ -773,14 +797,16 @@ const CardForm: React.FC<CardFormProps> = ({
             </div>
 
             <div className={`bg-slate-900/50 p-4 rounded-lg border ${!card.shoeSize ? 'border-red-500/50' : 'border-slate-700'}`}>
-              <label className="block text-xs font-medium text-slate-400 mb-3 uppercase">
+              <label htmlFor="shoeEU" className="block text-xs font-medium text-slate-400 mb-3 uppercase">
                 Shoe Size <span className="text-red-400">*</span>
               </label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 w-12">EU:</span>
                   <input
+                    id="shoeEU"
                     type="number"
+                    autoComplete="off"
                     placeholder="44"
                     min="35"
                     max="50"
@@ -800,7 +826,9 @@ const CardForm: React.FC<CardFormProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 w-12">US:</span>
                   <input
+                    id="shoeUS"
                     type="number"
+                    autoComplete="off"
                     placeholder="11"
                     min="4"
                     max="16"
@@ -816,11 +844,13 @@ const CardForm: React.FC<CardFormProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
-                Pawsday (YYYY.MM) <span className="text-red-400">*</span>
+              <label htmlFor="pawsday" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
+                Pawsday - Puppy Birthday (YYYY.MM) <span className="text-red-400">*</span>
               </label>
               <input
+                id="pawsday"
                 type="text"
+                autoComplete="off"
                 placeholder="2021.05"
                 pattern="\d{4}\.\d{2}"
                 value={card.birthdate}
@@ -833,12 +863,14 @@ const CardForm: React.FC<CardFormProps> = ({
               {!card.birthdate && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required</p>}
             </div>
             <div>
-              <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
+              <label htmlFor="country" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
                 Country <span className="text-red-400">*</span>
               </label>
               <div className="flex gap-2">
                 {!isCustomCountry ? (
                   <select
+                    id="country"
+                    autoComplete="off"
                     value={card.country}
                     onChange={(e) => {
                       if (e.target.value === 'OTHER') {
@@ -864,7 +896,9 @@ const CardForm: React.FC<CardFormProps> = ({
                   <div className="flex flex-col gap-1 w-full">
                     <div className="flex gap-1">
                       <input
+                        id="customCountryCode"
                         type="text"
+                        autoComplete="off"
                         placeholder="Country Code (e.g. FR, DE)"
                         className={`w-full bg-slate-900 border rounded-md px-2 py-1.5 text-xs text-white focus:border-bone-400 focus:outline-none ${!card.country ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                           }`}
@@ -887,7 +921,7 @@ const CardForm: React.FC<CardFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
+            <label htmlFor="socialLink" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
               Social Link <span className="text-red-400">*</span>
             </label>
             <div className="flex flex-col gap-2">
@@ -916,7 +950,9 @@ const CardForm: React.FC<CardFormProps> = ({
                 </label>
               </div>
               <input
+                id="socialLink"
                 type="text"
+                autoComplete="off"
                 placeholder={socialPlatform === 'instagram' ? "@username" : "linktr.ee/..."}
                 value={card.socialLink}
                 onChange={(e) => handleChange('socialLink', e.target.value)}
@@ -965,7 +1001,9 @@ const CardForm: React.FC<CardFormProps> = ({
               {contactPlatform === 'telegram' && (
                 <div className="space-y-1">
                   <input
+                    id="telegramHandle"
                     type="text"
+                    autoComplete="off"
                     placeholder="@telegram_username"
                     value={card.telegramHandle || ''}
                     onChange={(e) => handleChange('telegramHandle', e.target.value)}
@@ -977,7 +1015,9 @@ const CardForm: React.FC<CardFormProps> = ({
               {contactPlatform === 'instagram' && socialPlatform === 'other' && (
                 <div className="space-y-1">
                   <input
+                    id="instagramHandle"
                     type="text"
+                    autoComplete="off"
                     placeholder="@instagram_username"
                     value={card.instagramHandle || ''}
                     onChange={(e) => handleChange('instagramHandle', e.target.value)}

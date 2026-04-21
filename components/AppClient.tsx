@@ -6,6 +6,7 @@ import CardForm from './CardForm';
 import GameGuideModal from './GameGuideModal';
 import SendModal from './SendModal';
 import SupportModal from './SupportModal';
+import FAQSection from './FAQSection';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES } from '../types';
@@ -284,13 +285,18 @@ export default function AppClient() {
         const gear_tricks: Record<string, null> = Object.fromEntries(Object.keys(gear).map((k) => [k, null]));
         const kinks_tricks: Record<string, null> = Object.fromEntries(Object.keys(kinks).map((k) => [k, null]));
 
+        // instaUsername is the primary field when platform is Instagram (default).
+        // social_link is only used when platform is 'other' (e.g. linktr.ee).
+        const isInstagram = (card.socialPlatform || 'instagram') === 'instagram';
         return JSON.stringify({
             name: card.name,
             color: card.hoodColor.toLowerCase(),
             pawsday: card.birthdate,
             height: card.height,
             shoe_size: card.shoeSize,
-            social_link: card.socialLink,
+            ...(isInstagram
+                ? { instaUsername: card.socialLink }
+                : { social_link: card.socialLink }),
             country: card.country,
             gear,
             kinks,
@@ -387,11 +393,6 @@ export default function AppClient() {
             }
 
             dispatchSend({ type: 'SUCCESS' });
-            setTimeout(() => {
-                dispatchModal({ type: 'CLOSE_SEND' });
-                dispatchModal({ type: 'OPEN_SUPPORT' });
-                dispatchSend({ type: 'RESET_STATUS' });
-            }, 1500);
         } catch (err: any) {
             let msg: string = err.message || 'An unexpected error occurred. Please try again.';
             if (msg.includes('Load failed') || msg.includes('d failed')) msg = 'Network request failed. Your image might still be too large or connection is unstable.';
@@ -424,6 +425,11 @@ export default function AppClient() {
                 submitStatus={sendState.status} sendError={sendState.error}
                 isSending={sendState.isSending} isSendDisabled={isSendDisabled}
                 onSubmit={handleFinalizeSend} onClearError={() => dispatchSend({ type: 'CLEAR_ERROR' })}
+                onContinue={() => {
+                    dispatchModal({ type: 'CLOSE_SEND' });
+                    dispatchModal({ type: 'OPEN_SUPPORT' });
+                    dispatchSend({ type: 'RESET_STATUS' });
+                }}
             />
             <SupportModal isOpen={modals.showSupport} onClose={() => dispatchModal({ type: 'CLOSE_SUPPORT' })} onDeveloperSupport={handleDeveloperSupport} />
 
@@ -495,6 +501,8 @@ export default function AppClient() {
                         </div>
                     </div>
                 </div>
+
+                <FAQSection />
             </main>
 
             <AppFooter onOpenGuide={(tab) => dispatchModal({ type: 'OPEN_GUIDE', tab })} />

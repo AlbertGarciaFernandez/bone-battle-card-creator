@@ -20,9 +20,9 @@ export const generateCardMetadata = async (prompt: string): Promise<CardData> =>
     Data Requirements:
     - Name: A fun pup name.
     - Hood Color: Choose one that fits the vibe (Red, Blue, Black, etc.).
-    - Birthdate: Format YYYY.MM (e.g., 2019.05).
-    - Height: e.g., "180cm" or "5'11".
-    - Shoe Size: e.g., "43 EU" or "10 US".
+    - Birthdate: Format YYYY.MM (e.g., 2019.05) — Pawsday, the puppy's birthday.
+    - Height: In meters format, e.g., "1.80m / 5'11\"" (metric value must be in meters, not centimeters).
+    - Shoe Size: EU and US format per Wikipedia ISO 19407, e.g., "43EU / 10US".
     - Country: A 2-letter country code (e.g., US, DE, FR) or emoji.
     - Gear & Kinks: Assign bone values (0-5) to the specific categories provided.
     

@@ -29,8 +29,11 @@ export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, o
                         alt="Bone Battle"
                         width={160}
                         height={32}
-                        className="h-8 w-auto object-contain drop-shadow-md"
+                        className="h-8 w-auto object-contain drop-shadow-md hidden md:block"
                     />
+                    <div className="bg-slate-800 text-bone-100 font-black tracking-widest text-xs px-2 py-1 rounded-md uppercase ml-2 border border-slate-700 shadow-inner">
+                        Card Creator Official
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <button

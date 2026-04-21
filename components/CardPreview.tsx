@@ -1,6 +1,7 @@
 import React from 'react';
 import { CardData, HoodColor, CardPosition } from '../types';
 import { Bone } from 'lucide-react';
+import { getCoverScale } from '../lib/imageCover.js';
 
 interface CardPreviewProps {
   data: CardData;
@@ -31,10 +32,15 @@ const KINKS_RIGHT = ["Cuckolding", "Power Play", "Chastity", "BDSM", "Verbal", "
 
 const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
   const { name, hoodColor, imageUrl, birthdate, height, shoeSize, socialLink, country, gear, kinks, namePosition, statsPosition } = data;
+  const [imageCoverScale, setImageCoverScale] = React.useState(1);
 
   const colorClasses = ColorMap[hoodColor] || ColorMap[HoodColor.BLACK];
   const borderColor = colorClasses.split(' ')[1];
   const textColor = colorClasses.split(' ')[2];
+
+  React.useEffect(() => {
+    setImageCoverScale(1);
+  }, [imageUrl]);
 
   // Helper to render bones with side-specific rotation
   const renderBones = (count: number = 0, side: 'left' | 'right' = 'left') => {
@@ -107,6 +113,10 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
     ? 'rounded-r-xl rounded-l-none pl-4 pr-3 text-center'
     : 'rounded-l-xl rounded-r-none pl-3 pr-4 text-center';
 
+  const imageTranslateX = (data.imagePosition?.x || 0) * 0.5;
+  const imageTranslateY = (data.imagePosition?.y || 0) * 0.5;
+  const imageScale = imageCoverScale * Math.max(data.imageZoom || 1, 1);
+
 
   return (
     <div id="card-preview-container" className={`relative w-[360px] h-auto min-h-[640px] rounded-2xl overflow-hidden bg-black flex flex-col shadow-2xl border-4 border-neutral-800 font-sans`}>
@@ -124,6 +134,10 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
             src={imageUrl}
             alt={name}
             className="absolute transition-all duration-200"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              setImageCoverScale(getCoverScale(naturalWidth, naturalHeight, 15, 14));
+            }}
             style={{
               width: 'auto',
               height: 'auto',
@@ -131,7 +145,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
               maxHeight: '100%',
               top: '50%',
               left: '50%',
-              transform: `translate(calc(-50% + ${(data.imagePosition?.x || 0) * 0.5}%), calc(-50% + ${(data.imagePosition?.y || 0) * 0.5}%)) scale(${data.imageZoom || 1})`,
+              transform: `translate(calc(-50% + ${imageTranslateX}%), calc(-50% + ${imageTranslateY}%)) scale(${imageScale})`,
               transformOrigin: 'center center'
             }}
           />

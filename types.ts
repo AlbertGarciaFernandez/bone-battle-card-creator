@@ -33,9 +33,9 @@ export interface CardData {
   name: string; // Pup Name
   hoodColor: HoodColor;
   imageUrl?: string;
-  birthdate: string; // YYYY.MM
-  height: string; // Stored as formatted string "1.78m / 5'10""
-  shoeSize: string; // Stored as formatted string "44.5EU / 11.5US"
+  birthdate: string; // YYYY.MM format — Pawsday, the puppy's birthday (birth date as a pup)
+  height: string; // Stored as formatted string "1.78m / 5'10"" (meters to feet/inches conversion)
+  shoeSize: string; // Stored as formatted string "44.5EU / 11.5US" (Wikipedia ISO 19407 standard conversion)
   socialLink: string;
   country: string; // 2 letter code preferably
   termsConsent: boolean;
