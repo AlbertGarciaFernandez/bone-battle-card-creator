@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { FileText, Globe, Heart, Instagram, BookOpen } from 'lucide-react';
+import { Instagram, Globe, Sparkles } from 'lucide-react';
+
 
 interface AppFooterProps {
     onOpenGuide: (tab: 'basics' | 'diagram') => void;
@@ -9,76 +10,86 @@ interface AppFooterProps {
 
 export default function AppFooter({ onOpenGuide }: AppFooterProps) {
     return (
-        <footer className="max-w-7xl mx-auto px-4 py-12 border-t border-slate-800 mt-12 bg-slate-950">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+        <>
+            {/* Spacer so page content never gets hidden behind the fixed footer */}
+            <div className="h-16" />
 
-                {/* Creator */}
-                <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                    <div className="flex items-center gap-2 mb-2 text-bone-400">
-                        <Heart size={16} className="fill-current" />
-                        <span className="text-sm font-bold uppercase tracking-wider">Created By</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <a href="https://instagram.com/joker.pup.jx" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-bone-200 transition-colors group">
-                            <Instagram size={16} className="text-slate-600 group-hover:text-bone-400 transition-colors" />
-                            <span className="font-medium">joker.pup.jx</span>
-                        </a>
-                        <a href="https://instagram.com/bonebattlecards" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-bone-200 transition-colors group">
-                            <Instagram size={16} className="text-slate-600 group-hover:text-bone-400 transition-colors" />
-                            <span className="font-medium">bonebattlecards</span>
-                        </a>
+            <footer className="fixed bottom-0 left-0 right-0 z-50">
+                <div className="bg-slate-950/90 backdrop-blur-xl border-t border-slate-700/50">
+                    <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+                        {/* Left: Created By */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-bone-300 hidden sm:block">Created By</span>
+                            <a
+                                href="https://instagram.com/joker.pup.jx"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group hidden sm:flex items-center gap-1.5 text-bone-400 hover:text-bone-200 transition-colors"
+                            >
+                                <Instagram size={13} className="opacity-70 group-hover:opacity-100" />
+                                <span className="text-[11px] font-semibold">joker.pup.jx</span>
+                            </a>
+                            <a
+                                href="https://instagram.com/bonebattlecards"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group flex items-center gap-1.5 text-bone-400 hover:text-bone-200 transition-colors"
+                            >
+                                <Instagram size={13} className="opacity-70 group-hover:opacity-100" />
+                                <span className="text-[11px] font-semibold">bonebattlecards</span>
+                            </a>
+                        </div>
+
+                        {/* Center: Guides & Linktree */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => onOpenGuide('basics')}
+                                className="text-[11px] font-semibold text-green-400 hover:text-green-200 transition-colors hidden sm:block"
+                            >
+                                What is Bone Battle?
+                            </button>
+                            <button
+                                onClick={() => onOpenGuide('diagram')}
+                                className="text-[11px] font-semibold text-green-400 hover:text-green-200 transition-colors hidden sm:block"
+                            >
+                                Print, Share, Collect
+                            </button>
+                            <a
+                                href="https://linktr.ee/bonebattle"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group flex items-center gap-1 text-blue-400 hover:text-blue-200 transition-colors"
+                            >
+                                <Globe size={13} />
+                                <span className="text-[11px] font-semibold">Linktree</span>
+                            </a>
+                        </div>
+
+                        {/* Right: Developed By */}
+                        <div className="flex items-center gap-3">
+                            <a
+                                href="https://www.codehunterlab.com/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group flex items-center gap-1.5 text-cyan-300 hover:text-cyan-100 transition-colors"
+                            >
+                                <Sparkles size={13} />
+                                <span className="text-[11px] font-bold uppercase tracking-wider">CODEHUNTER LAB</span>
+                            </a>
+                            <a
+                                href="https://instagram.com/pup.hunter071"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group hidden sm:flex items-center gap-1.5 text-blue-300 hover:text-cyan-200 transition-colors"
+                            >
+                                <Instagram size={13} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                                <span className="text-[11px] font-semibold">pup.hunter071</span>
+                            </a>
+                            <span className="text-[10px] text-slate-500 hidden sm:block">Support the pack</span>
+                        </div>
                     </div>
                 </div>
-
-                {/* Game Guides */}
-                <div className="flex flex-col items-center text-center">
-                    <div className="flex items-center gap-2 mb-2 text-green-400">
-                        <BookOpen size={16} />
-                        <span className="text-sm font-bold uppercase tracking-wider">Game Guides</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <button onClick={() => onOpenGuide('basics')} className="flex items-center gap-2 text-slate-500 hover:text-green-200 transition-colors group">
-                            <span className="font-medium">What is Bone Battle?</span>
-                            <FileText size={14} className="text-slate-600 group-hover:text-green-400 transition-colors" />
-                        </button>
-                        <button onClick={() => onOpenGuide('diagram')} className="flex items-center gap-2 text-slate-500 hover:text-green-200 transition-colors group">
-                            <span className="font-medium">Print, Share, Collect</span>
-                            <FileText size={14} className="text-slate-600 group-hover:text-green-400 transition-colors" />
-                        </button>
-                        <a href="https://linktr.ee/bonebattle" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group mt-1">
-                            <span className="font-bold text-xs uppercase tracking-tighter">Bone Battle Linktree</span>
-                            <Globe size={14} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
-                        </a>
-                    </div>
-                </div>
-
-                {/* Developer */}
-                <div className="flex flex-col items-center md:items-end text-center md:text-right">
-                    <div className="flex items-center gap-2 mb-3 text-blue-400">
-                        <span className="text-sm font-bold uppercase tracking-wider">Developed By</span>
-                        <Globe size={16} />
-                    </div>
-                    <div className="flex flex-col gap-3 items-center md:items-end">
-                        <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-500 hover:text-bone-200 transition-colors group">
-                            <span className="font-medium">pup.hunter071</span>
-                            <Instagram size={16} className="text-slate-600 group-hover:text-bone-400 transition-colors" />
-                        </a>
-                        <a href="https://www.codehunterlab.com/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center md:items-end group">
-                            <span className="text-sm font-display font-black text-slate-400 group-hover:text-blue-400 transition-colors tracking-widest uppercase">CODEHUNTER LAB</span>
-                            <div className="flex items-center gap-1 text-slate-600 group-hover:text-blue-500/60 transition-colors">
-                                <span className="text-[10px] font-mono">www.codehunterlab.com</span>
-                                <Globe size={10} />
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
-            </div>
-            <div className="mt-10 pt-6 border-t border-slate-900 text-center">
-                <p className="text-xs text-slate-700 uppercase tracking-widest font-semibold">
-                    Support the pack &bull; Follow for updates
-                </p>
-            </div>
-        </footer>
+            </footer>
+        </>
     );
 }

@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 const FAQ_ITEMS = [
     {
         question: "How long does it take to get my card?",
-        answer: "Cards are usually processed within a few days depending on the volume of requests. Joker will confirm with you via DM once your card is added to the collection files."
+        answer: "Cards are usually processed within a few days depending on the volume of requests. BoneBattleCards will confirm with you via DM once your card is added to the collection files."
     },
     {
         question: "Can I use a custom image?",
@@ -21,8 +21,8 @@ const FAQ_ITEMS = [
         answer: "Once a card is finalized and published, changes are generally not allowed unless there's an error. Make sure you review your preview carefully before submitting!"
     },
     {
-        question: "What happens if the card screenshot fails on iOS?",
-        answer: "iOS submissions are supported, but screenshot capture can sometimes fail. If that happens, take a manual screenshot of your card preview and send it to Joker via Instagram or Telegram as instructed."
+        question: "What happens if the card capture fails on iOS?",
+        answer: "iOS submissions are supported, but card capture can sometimes fail. If that happens, try submitting again or contact BoneBattleCards via Instagram for help."
     },
     {
         question: "What if my submission fails or the upload is too large?",

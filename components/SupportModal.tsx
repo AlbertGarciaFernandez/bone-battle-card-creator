@@ -56,7 +56,7 @@ export default function SupportModal({ isOpen, onClose, onDeveloperSupport }: Su
 
                     <div className="text-sm text-slate-300 space-y-4 leading-relaxed bg-slate-950/50 p-6 rounded-xl border border-slate-800">
                         <p className="font-medium">
-                            {"I'm doing all of this because I love to and thus won't charge anything (you should cover shipping costs and prints of your own cards though)."}
+                            {"We're doing all of this because we love to and thus won't charge anything (you should cover shipping costs and prints of your own cards though)."}
                         </p>
                         <p className="text-slate-400 italic">
                             {"BUT as many pups are asking about how to support all of this… here we go:"}
@@ -116,7 +116,7 @@ export default function SupportModal({ isOpen, onClose, onDeveloperSupport }: Su
                         </ul>
 
                         <p className="text-center text-[11px] italic text-slate-500 mt-6 border-t border-slate-800 pt-4">
-                            {"Feel free to support any way you want, or just enjoy the cards and game for free. I'm happy when you are! ^^"}
+                            {"Feel free to support any way you want, or just enjoy the cards and game for free. We're happy when you are! ^^"}
                         </p>
                     </div>
 

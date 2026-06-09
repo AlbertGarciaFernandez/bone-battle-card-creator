@@ -86,7 +86,7 @@ export default function SendModal({
                                 </div>
                                 <div className="bg-amber-950/30 p-3 rounded-lg border border-amber-700/40">
                                     <p className="text-xs text-amber-300 mb-1 font-bold">2. Verification DM ⚠️</p>
-                                    <p className="text-xs text-amber-200/80">After it sends successfully, with your screenshot you will be asked to DM Joker to verify your identity. This prevents spam!</p>
+                                    <p className="text-xs text-amber-200/80">After it sends successfully, you will be asked to DM BoneBattleCards to verify your identity. This prevents spam!</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
@@ -150,24 +150,24 @@ export default function SendModal({
                                         <p className="text-amber-100 text-base leading-relaxed mb-4">
                                             Now you <span className="font-bold text-white">MUST</span> send a DM to{' '}
                                             <a
-                                                href="https://instagram.com/joker.pup.jx"
+                                                href="https://instagram.com/bonebattlecards"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="font-bold text-amber-300 underline underline-offset-2 hover:text-white transition-colors"
                                             >
-                                                @joker.pup.jx
+                                                @bonebattlecards
                                             </a>{' '}
-                                            on Instagram with the screenshot of your card to confirm that <span className="font-bold text-white">this is really your request, for your own card</span>.
+                                            on Instagram to confirm that <span className="font-bold text-white">this is really your request, for your own card</span>.
                                             Requests without verification will NOT be processed.
                                         </p>
                                         <a
-                                            href="https://ig.me/m/joker.pup.jx"
+                                            href="https://ig.me/m/bonebattlecards"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center justify-center w-full gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-base px-5 py-4 rounded-lg transition-colors shadow-lg animate-pulse"
                                         >
                                             <Instagram size={20} />
-                                            DM @joker.pup.jx on Instagram
+                                            DM @bonebattlecards on Instagram
                                         </a>
                                     </>
                                 )}

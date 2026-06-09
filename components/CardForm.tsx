@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES, CardPosition } from '../types';
+import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES, CardPosition, SHOE_SIZE_ROWS } from '../types';
 import { Image as ImageIcon, Bone, AlertCircle, Upload, Info, Dog, X, Globe, Instagram, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface CardFormProps {
@@ -307,9 +307,6 @@ const CardForm: React.FC<CardFormProps> = ({
   const [ft, setFt] = useState<string>('');
   const [inch, setInch] = useState<string>('');
 
-  const [euShoe, setEuShoe] = useState<string>('');
-  const [usShoe, setUsShoe] = useState<string>('');
-
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
 
   // Social Platform State
@@ -422,56 +419,6 @@ const CardForm: React.FC<CardFormProps> = ({
     } else {
       setCm('');
       handleChange('height', '');
-    }
-  };
-
-  // Shoe Conversion Logic — lookup table based on Wikipedia ISO 19407 shoe size standard
-  // https://en.wikipedia.org/wiki/Shoe_size#ISO_19407_and_shoe_size_conversion
-  const EU_TO_US: Record<number, number> = {
-    34: 3, 34.5: 3.5, 35: 4, 35.5: 4.5,
-    36: 5, 36.5: 5.5, 37: 6, 37.5: 6.5,
-    38: 7, 38.5: 7.5, 39: 8, 39.5: 8.5,
-    40: 9, 40.5: 9.5, 41: 10, 41.5: 10.5,
-    42: 11, 42.5: 11.5, 43: 12, 43.5: 12.5,
-    44: 13, 44.5: 13.5, 45: 14, 45.5: 14.5,
-    46: 15, 46.5: 15.5, 47: 16, 47.5: 16.5,
-    48: 17, 49: 18
-  };
-  const US_TO_EU: Record<number, number> = Object.fromEntries(
-    Object.entries(EU_TO_US).map(([eu, us]) => [us, parseFloat(eu)])
-  );
-
-  const lookupNearest = (table: Record<number, number>, input: number): number => {
-    const keys = Object.keys(table).map(Number);
-    const nearest = keys.reduce((prev, curr) =>
-      Math.abs(curr - input) < Math.abs(prev - input) ? curr : prev
-    );
-    return table[nearest];
-  };
-
-  const updateShoeFromEu = (val: string) => {
-    if (val.length > 5) return;
-    setEuShoe(val);
-    const numEu = parseFloat(val);
-    if (!isNaN(numEu) && numEu > 30) {
-      const usVal = lookupNearest(EU_TO_US, numEu);
-      setUsShoe(usVal.toString());
-      handleChange('shoeSize', `${val}EU / ${usVal}US`);
-    } else {
-      handleChange('shoeSize', val);
-    }
-  };
-
-  const updateShoeFromUs = (val: string) => {
-    if (val.length > 5) return;
-    setUsShoe(val);
-    const numUs = parseFloat(val);
-    if (!isNaN(numUs) && numUs > 0) {
-      const euVal = lookupNearest(US_TO_EU, numUs);
-      setEuShoe(euVal.toString());
-      handleChange('shoeSize', `${euVal}EU / ${val}US`);
-    } else {
-      handleChange('shoeSize', val);
     }
   };
 
@@ -758,7 +705,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     required
                     className={`flex-1 bg-slate-950 border rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none ${!cm || parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
                   />
-                  {!cm && <p className="text-[10px] text-red-500 mt-1 font-bold absolute -bottom-4">Required</p>}
+                  {!cm && <p className="text-[10px] text-red-500 mt-1 font-bold">Required</p>}
                   <span className="text-sm text-slate-500">m</span>
                 </div>
                 {parseFloat(cm) > 0 && (parseFloat(cm) < 1.0 || parseFloat(cm) > 2.5) && (
@@ -777,7 +724,7 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="8"
                     value={ft}
                     onChange={(e) => updateHeightFromFtIn(e.target.value, inch)}
-                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 sm:py-2 py-3 sm:text-sm text-base text-white focus:border-bone-400 outline-none"
+                    className="w-16 bg-slate-950 border border-slate-600 rounded px-3 sm:py-2 py-3 sm:text-sm text-base text-white focus:border-bone-400 outline-none"
                   />
                   <span className="text-sm text-slate-500">ft</span>
                   <input
@@ -789,56 +736,66 @@ const CardForm: React.FC<CardFormProps> = ({
                     max="11"
                     value={inch}
                     onChange={(e) => updateHeightFromFtIn(ft, e.target.value)}
-                    className="w-12 bg-slate-950 border border-slate-600 rounded px-3 sm:py-2 py-3 sm:text-sm text-base text-white focus:border-bone-400 outline-none"
+                    className="w-16 bg-slate-950 border border-slate-600 rounded px-3 sm:py-2 py-3 sm:text-sm text-base text-white focus:border-bone-400 outline-none"
                   />
                   <span className="text-sm text-slate-500">in</span>
                 </div>
               </div>
             </div>
 
-            <div className={`bg-slate-900/50 p-4 rounded-lg border ${!card.shoeSize ? 'border-red-500/50' : 'border-slate-700'}`}>
-              <label htmlFor="shoeEU" className="block text-xs font-medium text-slate-400 mb-3 uppercase">
-                Shoe Size <span className="text-red-400">*</span>
-              </label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-500 w-12">EU:</span>
-                  <input
-                    id="shoeEU"
-                    type="number"
-                    autoComplete="off"
-                    placeholder="44"
-                    min="35"
-                    max="50"
-                    value={euShoe}
-                    onChange={(e) => updateShoeFromEu(e.target.value)}
-                    required
-                    className={`flex-1 bg-slate-950 border rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none ${!euShoe || parseFloat(euShoe) < 35 || parseFloat(euShoe) > 50 ? 'border-red-500 text-red-100 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-600'}`}
-                  />
-                  {!euShoe && <p className="text-[10px] text-red-500 mt-1 font-bold absolute -bottom-4">Required</p>}
-                  <span className="text-sm text-slate-500">EU</span>
-                </div>
-                {parseFloat(euShoe) > 0 && (parseFloat(euShoe) < 35 || parseFloat(euShoe) > 50) && (
-                  <p className="text-[10px] text-red-400 flex items-center gap-1 pl-14">
-                    <AlertTriangle size={10} /> Standard range is 35-50 EU
-                  </p>
+            <div className={`bg-slate-900/50 p-4 rounded-2xl border ${!card.shoeSize ? 'border-red-500/50' : 'border-slate-700/60'}`}>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                  Shoe Size <span className="text-red-400">*</span>
+                </p>
+                {card.shoeSize && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-bone-500/15 border border-bone-500/30 px-3 py-1 text-xs font-black text-bone-300 tracking-wide">
+                    <span className="h-1.5 w-1.5 rounded-full bg-bone-400" />
+                    EU {card.shoeSize}
+                  </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-500 w-12">US:</span>
-                  <input
-                    id="shoeUS"
-                    type="number"
-                    autoComplete="off"
-                    placeholder="11"
-                    min="4"
-                    max="16"
-                    value={usShoe}
-                    onChange={(e) => updateShoeFromUs(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 sm:py-1.5 py-3 sm:text-xs text-base text-white focus:border-bone-400 outline-none"
-                  />
-                  <span className="text-sm text-slate-500">US</span>
-                </div>
               </div>
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-700/50 bg-slate-950/50">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-sm text-slate-500 uppercase tracking-widest">
+                    <tr>
+                      <th className="px-4 py-2.5 font-semibold text-[10px]">EU</th>
+                      <th className="px-4 py-2.5 font-semibold text-[10px]">UK</th>
+                      <th className="px-4 py-2.5 font-semibold text-[10px]">US</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SHOE_SIZE_ROWS.map((size) => {
+                      const isSelected = card.shoeSize === size.eu;
+
+                      return (
+                        <tr key={size.eu} className="border-t border-slate-800/60">
+                          <td colSpan={3} className="p-0">
+                            <button
+                              type="button"
+                              aria-pressed={isSelected}
+                              onClick={() => handleChange('shoeSize', size.eu)}
+                              className={`grid w-full grid-cols-3 px-4 py-2.5 text-left transition-all duration-150 ${isSelected ? 'bg-bone-500 text-slate-950 font-black shadow-[0_0_15px_rgba(217,119,6,0.25)]' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'}`}
+                            >
+                              <span className="flex items-center gap-2">
+                                {isSelected && (
+                                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                {size.eu}
+                              </span>
+                              <span className="flex items-center">{size.uk}</span>
+                              <span className="flex items-center">{size.us}</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {!card.shoeSize && <p className="text-[10px] text-red-500 mt-2 font-bold">Required</p>}
             </div>
           </div>
 
@@ -1275,7 +1232,7 @@ const CardForm: React.FC<CardFormProps> = ({
               <div>
                 <p className="font-semibold text-slate-100 mb-1">1. Copyright &amp; Image Rights</p>
                 <p><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Image Source:</span> You confirm that you possess the unrestricted copyright and usage rights for the submitted photo (or that you have the photographer's explicit permission for use within the context of BoneBattle).</p>
-                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Waiver of Liability:</span> You indemnify and hold the creator (Joker) harmless from any third-party claims arising from the unauthorized use of the provided image material.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Waiver of Liability:</span> You indemnify and hold the creator (BoneBattleCards) harmless from any third-party claims arising from the unauthorized use of the provided image material.</p>
               </div>
 
               <div>
@@ -1283,7 +1240,7 @@ const CardForm: React.FC<CardFormProps> = ({
                 <p>By submitting your data for the creation of your card, you consent to the following uses:</p>
                 <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Card Design:</span> The processing of your data (name, stats, kinks) and your image for the creation of the digital print template.</p>
                 <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Promotion:</span> The display of your card for promotional purposes on social media (e.g., Instagram).</p>
-                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Starter Packs:</span> The use of your card in physical "Starter Packs" (randomized card sets) produced by Joker and distributed at events or via mail. This consent remains valid even if BoneBattle is later registered as a formal business.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Starter Packs:</span> The use of your card in physical "Starter Packs" (randomized card sets) produced by BoneBattleCards and distributed at events or via mail. This consent remains valid even if BoneBattle is later registered as a formal business.</p>
               </div>
 
               <div>
@@ -1294,8 +1251,8 @@ const CardForm: React.FC<CardFormProps> = ({
               <div>
                 <p className="font-semibold text-slate-100 mb-1">4. Design Protection &amp; Integrity</p>
                 <p><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Prohibition of Changes:</span> It is not permitted to independently modify or manipulate the BoneBattle card design (content, layout, typography, graphics, etc.).</p>
-                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Printing Rights:</span> You are authorized to print the card finalized by Joker for private purposes. This authorization expires automatically upon revocation of this consent.</p>
-                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Update Service:</span> Changes to data or images are made exclusively by Joker. Official update windows (approx. 2× per year) will be offered for this purpose.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Printing Rights:</span> You are authorized to print the card finalized by BoneBattleCards for private purposes. This authorization expires automatically upon revocation of this consent.</p>
+                <p className="mt-1"><span className="text-indigo-400">●</span> <span className="font-medium text-slate-200">Update Service:</span> Changes to data or images are made exclusively by BoneBattleCards. Official update windows (approx. 2× per year) will be offered for this purpose.</p>
               </div>
 
               <div>
@@ -1374,7 +1331,7 @@ const CardForm: React.FC<CardFormProps> = ({
               className="mt-0.5 cursor-pointer w-5 h-5 accent-indigo-500 shrink-0"
             />
             <label htmlFor="consent-preview" className="text-sm text-slate-300 cursor-pointer">
-              <span className="text-red-400">*</span> I accept that this is a preview of the card and the creator (<span className="font-medium text-slate-200">joker.pup.jx</span>) has the final decision on the positioning of elements.
+              <span className="text-red-400">*</span> I accept that this is a preview of the card and the creator (<span className="font-medium text-slate-200">bonebattlecards</span>) has the final decision on the positioning of elements.
             </label>
           </div>
 

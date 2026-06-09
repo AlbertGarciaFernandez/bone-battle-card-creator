@@ -7,9 +7,10 @@ import GameGuideModal from './GameGuideModal';
 import SendModal from './SendModal';
 import SupportModal from './SupportModal';
 import FAQSection from './FAQSection';
+import SupportSection from './SupportSection';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
-import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES } from '../types';
+import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES, SHOE_SIZE_ROWS } from '../types';
 import { generateCardImage } from '../services/geminiService';
 import { Camera, AlertCircle } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
@@ -182,6 +183,18 @@ export default function AppClient() {
         isSending: false, status: 'idle' as const, error: null,
     });
 
+    // Refs for scroll navigation
+    const supportRef = React.useRef<HTMLDivElement>(null);
+    const faqRef = React.useRef<HTMLDivElement>(null);
+
+    const scrollToSupport = () => {
+        supportRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const scrollToFAQ = () => {
+        faqRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
     const isIOS = useMemo(() => {
         if (typeof navigator === 'undefined') return false;
         return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -288,12 +301,16 @@ export default function AppClient() {
         // instaUsername is the primary field when platform is Instagram (default).
         // social_link is only used when platform is 'other' (e.g. linktr.ee).
         const isInstagram = (card.socialPlatform || 'instagram') === 'instagram';
+        const sizeRow = SHOE_SIZE_ROWS.find((s) => s.eu === card.shoeSize);
+        const shoeSizeFormatted = sizeRow
+            ? `${sizeRow.eu}EU / ${sizeRow.us}US`
+            : card.shoeSize;
         return JSON.stringify({
             name: card.name,
             color: card.hoodColor.toLowerCase(),
             pawsday: card.birthdate,
             height: card.height,
-            shoe_size: card.shoeSize,
+            shoe_size: shoeSizeFormatted,
             ...(isInstagram
                 ? { instaUsername: card.socialLink }
                 : { social_link: card.socialLink }),
@@ -439,6 +456,8 @@ export default function AppClient() {
                 onExportTXT={handleExportPhotoshopTXT}
                 onExportCSV={handleExportCSV}
                 onExportJSON={handleExportJSON}
+                onScrollToSupport={scrollToSupport}
+                onScrollToFAQ={scrollToFAQ}
             />
 
             <main className="max-w-7xl mx-auto px-4 py-8">
@@ -449,8 +468,7 @@ export default function AppClient() {
                         <div>
                             <p className="text-sm font-bold text-amber-200">iOS Device Detected</p>
                             <p className="text-xs text-amber-300/80 mt-1">
-                                Submission from iOS is supported. If the card screenshot fails to capture,
-                                please <strong className="text-white">take a manual screenshot</strong> of your card preview and send it to Joker on Instagram.
+                                Submission from iOS is supported. If the card capture fails, please try again or contact BoneBattleCards on Instagram for help.
                             </p>
                         </div>
                     </div>
@@ -465,7 +483,7 @@ export default function AppClient() {
                             <div>
                                 <h3 className="text-lg font-bold text-green-100">Card Ready for Battle!</h3>
                                 <p className="text-sm text-green-200/80">
-                                    Please <span className="font-bold text-white underline decoration-2">take a screenshot</span> of your card preview before sending.
+                                    Your card is ready to be sent to BoneBattleCards for review.
                                 </p>
                             </div>
                         </div>
@@ -502,7 +520,13 @@ export default function AppClient() {
                     </div>
                 </div>
 
-                <FAQSection />
+                <div ref={supportRef}>
+                    <SupportSection onDeveloperSupport={handleDeveloperSupport} />
+                </div>
+
+                <div ref={faqRef}>
+                    <FAQSection />
+                </div>
             </main>
 
             <AppFooter onOpenGuide={(tab) => dispatchModal({ type: 'OPEN_GUIDE', tab })} />

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import NextImage from 'next/image';
-import { Download, FileText, Send } from 'lucide-react';
+import { Download, FileText, Send, HelpCircle, Gift } from 'lucide-react';
 
 interface AppHeaderProps {
     canSend: boolean;
@@ -10,9 +10,11 @@ interface AppHeaderProps {
     onExportTXT: () => void;
     onExportCSV: () => void;
     onExportJSON: () => void;
+    onScrollToSupport?: () => void;
+    onScrollToFAQ?: () => void;
 }
 
-export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, onExportJSON }: AppHeaderProps) {
+export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, onExportJSON, onScrollToSupport, onScrollToFAQ }: AppHeaderProps) {
     return (
         <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -35,7 +37,33 @@ export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, o
                         Card Creator Official
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                    {/* Support Link */}
+                    {onScrollToSupport && (
+                        <button
+                            onClick={onScrollToSupport}
+                            className="hidden sm:flex items-center gap-2 text-slate-300 hover:text-white text-sm px-3 py-2 rounded-lg border border-slate-700 hover:border-orange-500/50 transition-colors"
+                            title="Jump to Support section"
+                        >
+                            <Gift size={14} />
+                            Support
+                        </button>
+                    )}
+                    
+                    {/* FAQ Link */}
+                    {onScrollToFAQ && (
+                        <button
+                            onClick={onScrollToFAQ}
+                            className="hidden sm:flex items-center gap-2 text-slate-300 hover:text-white text-sm px-3 py-2 rounded-lg border border-slate-700 hover:border-blue-500/50 transition-colors"
+                            title="Jump to FAQ section"
+                        >
+                            <HelpCircle size={14} />
+                            FAQ
+                        </button>
+                    )}
+                    
+                    <div className="w-px h-6 bg-slate-800 mx-1 hidden sm:block" />
+                    
                     <button
                         onClick={onSend}
                         disabled={!canSend}

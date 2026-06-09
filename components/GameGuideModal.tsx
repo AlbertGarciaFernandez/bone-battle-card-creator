@@ -140,7 +140,7 @@ const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose, initia
                                             Free Starter Packs
                                         </h4>
                                         <p className="text-sm text-slate-400 leading-snug">
-                                            Find <strong className="text-orange-200">joker.pup.jx</strong> at events to get a pack of 10 random cards. It's a free treat for pups to jumpstart the game!
+                                            Find <strong className="text-orange-200">bonebattlecards staff</strong> at events to get a pack of 10 random cards. It's a free treat for pups to jumpstart the game!
                                         </p>
                                     </div>
                                 </div>
@@ -210,7 +210,7 @@ const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose, initia
                                     {/* Vertical Line */}
                                     <div className="w-1 bg-gradient-to-b from-slate-700 to-transparent h-full absolute top-32 left-1/2 -translate-x-1/2 -z-0"></div>
 
-                                    {/* Actions from Joker */}
+                                    {/* Actions from BoneBattleCards */}
                                     <div className="z-10 w-full space-y-4">
                                         <div className="bg-slate-800 border border-slate-600 p-3 rounded-lg text-center text-xs text-slate-300 shadow-xl">
                                             Creates Card & Preview
@@ -220,7 +220,7 @@ const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose, initia
                                         </div>
                                         <div className="bg-orange-900/20 border border-orange-500/30 p-3 rounded-lg text-center text-xs text-orange-200 shadow-xl">
                                             Prints Starterpacks<br />
-                                            <span className="text-[9px] opacity-60">(Paid by Joker as free treat)</span>
+                                            <span className="text-[9px] opacity-60">(Paid by BoneBattleCards team as free treat)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -251,7 +251,7 @@ const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose, initia
                                             <div className="absolute -left-[25px] top-3 w-4 h-4 rounded-full bg-blue-600 border-4 border-slate-900"></div>
                                             <div className="bg-slate-800 p-4 rounded-xl border border-blue-500/30">
                                                 <p className="text-sm font-bold text-blue-200 mb-1">2. Send Info + Pic</p>
-                                                <p className="text-xs text-slate-400">To Joker for final creation</p>
+                                                <p className="text-xs text-slate-400">To BoneBattleCards for final creation</p>
                                             </div>
                                         </div>
 
@@ -289,7 +289,7 @@ const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose, initia
                                                     <span className="text-sm font-bold text-orange-200">Non-EU</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-xs text-slate-300">Order via Joker</p>
+                                                    <p className="text-xs text-slate-300">Order via BoneBattleCards</p>
                                                     <p className="text-[10px] text-slate-500">Pay Sharer → Forward</p>
                                                 </div>
                                             </div>
