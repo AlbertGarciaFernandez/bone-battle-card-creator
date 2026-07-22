@@ -157,7 +157,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ data }) => {
 
         {/* Name Overlay */}
         <div className={`${getNameStyles(namePosition)} bg-black/40 backdrop-blur-md py-2`}>
-          <h2 className={`text-2xl font-black ${textColor} drop-shadow-md`}>
+          <h2 className={`text-2xl font-black text-white drop-shadow-md`}>
             {name || "PUP NAME"}
           </h2>
         </div>

@@ -818,6 +818,9 @@ const CardForm: React.FC<CardFormProps> = ({
                   }`}
               />
               {!card.birthdate && <p className="text-[10px] text-red-500 mt-1 font-bold animate-pulse">Required</p>}
+              <p className="text-[10px] text-slate-500 mt-1 italic">
+                This should be the date you were born as a puppy (your pup pawsday), not your real birth date.
+              </p>
             </div>
             <div>
               <label htmlFor="country" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
