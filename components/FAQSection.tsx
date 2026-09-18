@@ -10,7 +10,7 @@ const FAQ_ITEMS = [
     },
     {
         question: "Can I use a custom image?",
-        answer: "Yes! You can upload any photo you have the rights to. Just make sure the file is not too heavy (stay under 3MB) to avoid submission issues."
+        answer: "Yes! You can upload any photo you have the rights to. Photos up to 20MB are accepted and optimized automatically before sending."
     },
     {
         question: "Why do I need to send a Verification DM?",
@@ -26,7 +26,7 @@ const FAQ_ITEMS = [
     },
     {
         question: "What if my submission fails or the upload is too large?",
-        answer: "The app checks image size and file limits before sending. If submission fails, try a smaller photo, check your connection, and follow the on-screen error message for the next step."
+        answer: "The app checks image size and optimizes large photos before sending. If submission still fails, try another photo, check your connection, and follow the on-screen error message for the next step."
     },
     {
         question: "How do the 'Dog Tricks' work?",

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CardData, HoodColor, GEAR_CATEGORIES, KINKS_CATEGORIES, CardPosition, SHOE_SIZE_ROWS } from '../types';
 import { Image as ImageIcon, Bone, AlertCircle, Upload, Info, Dog, X, Globe, Instagram, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
+import { UPLOAD_IMAGE_LIMIT_BYTES } from '../lib/optimizeUploadedImage.js';
 
 interface CardFormProps {
   card: CardData;
   setCard: (card: CardData) => void;
+  onImageFileChange?: (file: File | null) => void;
   onGenerateImage: () => void;
   isGeneratingImage: boolean;
 }
@@ -299,6 +301,7 @@ const KINK_DESCRIPTIONS: Record<string, string> = {
 const CardForm: React.FC<CardFormProps> = ({
   card,
   setCard,
+  onImageFileChange,
   onGenerateImage,
   isGeneratingImage
 }) => {
@@ -320,6 +323,7 @@ const CardForm: React.FC<CardFormProps> = ({
   const [isCustomCountry, setIsCustomCountry] = useState(false);
   const [customCountryName, setCustomCountryName] = useState('');
   const [showCropModal, setShowCropModal] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   // Update effect to detect if country provided is in list or custom
   useEffect(() => {
@@ -352,9 +356,22 @@ const CardForm: React.FC<CardFormProps> = ({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        setImageUploadError('Please upload an image file.');
+        e.target.value = '';
+        return;
+      }
+      if (file.size > UPLOAD_IMAGE_LIMIT_BYTES) {
+        setImageUploadError('Image is too large. Please upload a photo under 20MB.');
+        e.target.value = '';
+        return;
+      }
+
       // Use URL.createObjectURL instead of FileReader to save memory on mobile
       // (avoid huge base64 strings)
       const objectUrl = URL.createObjectURL(file);
+      onImageFileChange?.(file);
+      setImageUploadError(null);
       handleChange('imageUrl', objectUrl);
 
       // Clean up previous object URL if it exists and is a blob?
@@ -631,7 +648,11 @@ const CardForm: React.FC<CardFormProps> = ({
                       autoComplete="off"
                       placeholder="Paste Image URL..."
                       value={card.imageUrl || ''}
-                      onChange={(e) => handleChange('imageUrl', e.target.value)}
+                      onChange={(e) => {
+                        onImageFileChange?.(null);
+                        setImageUploadError(null);
+                        handleChange('imageUrl', e.target.value);
+                      }}
                       required
                       className={`w-full bg-slate-950 border rounded-lg px-4 sm:py-1.5 py-3 sm:text-xs text-sm text-white focus:border-bone-400 focus:ring-1 focus:ring-bone-400/20 outline-none transition-all ${!card.imageUrl ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-slate-700'
                         }`}
@@ -646,8 +667,9 @@ const CardForm: React.FC<CardFormProps> = ({
                     </label>
                   </div>
                 </div>
+                {imageUploadError && <p className="text-[10px] text-red-400 mt-2 font-bold flex items-center gap-1"><AlertCircle size={10} /> {imageUploadError}</p>}
                 <p className="text-[10px] text-slate-500 mt-2 italic flex items-center gap-1">
-                  <Info size={10} /> Tip: Use a vertical portrait for best results.
+                  <Info size={10} /> Tip: Use a vertical portrait. Photos up to 20MB are optimized automatically before sending.
                 </p>
               </div>
             </div>

@@ -15,6 +15,8 @@ import { generateCardImage } from '../services/geminiService';
 import { Camera, AlertCircle } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import html2canvas from 'html2canvas';
+import { prepareOriginalImageBlob } from '../lib/prepareOriginalImageBlob.js';
+import { optimizeUploadedImage } from '../lib/optimizeUploadedImage.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -175,6 +177,7 @@ const sendReducer = (state: SendState, action: SendAction): SendState => {
 
 export default function AppClient() {
     const [card, setCard] = useState<CardData>(INITIAL_CARD);
+    const uploadedImageFileRef = React.useRef<File | null>(null);
     const [genState, setGenState] = useState({ isGenerating: false, error: null as string | null });
     const [modals, dispatchModal] = useReducer(modalReducer, {
         showSend: false, showSupport: false, showGuide: false, guideTab: 'basics' as const,
@@ -257,8 +260,8 @@ export default function AppClient() {
         if (!card.name) return;
         setGenState({ isGenerating: true, error: null });
         try {
-            const prompt = `${card.name}, ${card.hoodColor} hood human pup`;
-            const imageBase64 = await generateCardImage(prompt, 'photo portrait, dramatic lighting, high quality');
+            const imageBase64 = await generateCardImage(card.name, card.hoodColor);
+            uploadedImageFileRef.current = null;
             setCard((prev) => ({ ...prev, imageUrl: imageBase64 }));
         } catch (err) {
             console.error(err);
@@ -363,10 +366,33 @@ export default function AppClient() {
             } catch (e) { console.error('Card capture failed:', e); }
 
             let originalBlob: Blob | null = null;
+            let originalFilename: string | null = null;
+            let imageOptimization: Record<string, unknown> | null = null;
             if (card.imageUrl) {
                 try {
-                    originalBlob = await compressToBlob(card.imageUrl, 800, 0.7);
+                    if (uploadedImageFileRef.current) {
+                        const optimizedImage = await optimizeUploadedImage(uploadedImageFileRef.current);
+                        originalBlob = optimizedImage?.blob ?? null;
+                        originalFilename = optimizedImage?.filename ?? null;
+                        imageOptimization = optimizedImage
+                            ? {
+                                optimized: optimizedImage.optimized,
+                                originalBytes: optimizedImage.originalBytes,
+                                optimizedBytes: optimizedImage.optimizedBytes,
+                                maxDimension: optimizedImage.maxDimension,
+                                quality: optimizedImage.quality,
+                            }
+                            : null;
+                        console.log('[Image optimization]', imageOptimization);
+                    } else {
+                        originalBlob = await prepareOriginalImageBlob({
+                            imageUrl: card.imageUrl,
+                            uploadedImageFile: null,
+                            compressImageUrl: compressToBlob,
+                        });
+                    }
                 } catch (e) {
+                    if (uploadedImageFileRef.current) throw e;
                     console.warn('Canvas compress failed, trying direct blob fetch:', e);
                     if (card.imageUrl.startsWith('blob:')) {
                         try { const resp = await fetch(card.imageUrl); originalBlob = await resp.blob(); }
@@ -378,27 +404,34 @@ export default function AppClient() {
             const cardCaptureBlob = capturedCardBlob ?? (capturedCardImage ? await compressToBlob(capturedCardImage, 800, 0.7) : null);
             if (!originalBlob && !cardCaptureBlob) throw new Error('Could not process your image. Please try a different photo.');
 
-            const { imageUrl: _excluded, ...cardWithoutImage } = card;
-            const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), captureFailed: !cardCaptureBlob });
+            const cardWithoutImage = { ...card };
+            delete cardWithoutImage.imageUrl;
+            const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), captureFailed: !cardCaptureBlob, imageOptimization });
             const textPart = getPhotoshopTXTContent();
             const csvPart = getCSVContent();
             const schemaJsonPart = getCardSchemaJSON();
             const totalSize = (originalBlob?.size ?? 0) + (cardCaptureBlob?.size ?? 0) + new Blob([jsonPart]).size + new Blob([textPart]).size + new Blob([csvPart]).size + new Blob([schemaJsonPart]).size;
 
-            if (totalSize > 3.5 * 1024 * 1024) throw new Error(`File size too large (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try a different photo.`);
+            if (totalSize > 3.5 * 1024 * 1024) throw new Error(`File size is still too large after optimization (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try another photo or send the original by DM after submitting.`);
 
             const formData = new FormData();
             formData.append('card', jsonPart);
             formData.append('cardText', textPart);
             formData.append('cardCSV', csvPart);
             formData.append('cardSchemaJSON', schemaJsonPart);
-            if (originalBlob) formData.append('originalImage', originalBlob, `${card.name.replace(/\s+/g, '_')}_original.jpg`);
+            if (originalBlob) {
+                formData.append('originalImage', originalBlob, originalFilename || `${card.name.replace(/\s+/g, '_')}_original_optimized.jpg`);
+            }
             if (cardCaptureBlob) formData.append('cardCapture', cardCaptureBlob, `${card.name.replace(/\s+/g, '_')}_card.jpg`);
 
             const response = await fetch('/api/send-card', { method: 'POST', body: formData });
             let result;
             try { result = await response.json(); } catch { throw new Error(`Server error (${response.status}). Please try again.`); }
             if (!response.ok) throw new Error(result.error || 'Failed to send card');
+
+            if (result.email) {
+                console.log('[Resend email] queued', result.email);
+            }
 
             // Log Base44 sync result to browser console for debugging
             if (result.sync) {
@@ -501,7 +534,13 @@ export default function AppClient() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
                     <div className="lg:col-span-6 xl:col-span-6 order-2 lg:order-1">
-                        <CardForm card={card} setCard={setCard} onGenerateImage={handleGenerateImageOnly} isGeneratingImage={genState.isGenerating} />
+                        <CardForm
+                            card={card}
+                            setCard={setCard}
+                            onImageFileChange={(file) => { uploadedImageFileRef.current = file; }}
+                            onGenerateImage={handleGenerateImageOnly}
+                            isGeneratingImage={genState.isGenerating}
+                        />
                     </div>
                     <div className="lg:col-span-6 xl:col-span-6 order-1 lg:order-2 flex flex-col items-center">
                         <div className="sticky top-28">

@@ -1,7 +1,11 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
+import { MAX_EMAIL_IMAGE_BYTES, addAttachmentBytes } from '../../../lib/attachmentLimits.js';
+import { buildEmailDiagnostics } from '../../../lib/emailDiagnostics.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const CARD_REQUEST_RECIPIENTS = ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'];
 
 // ─── Base44 field parsers ─────────────────────────────────────────────────────
 
@@ -41,6 +45,10 @@ const extractIgUsername = (link: string): string => {
 
 export async function POST(req: Request) {
     try {
+        if (!checkRateLimit(`send-card:${getClientIp(req)}`, 3)) {
+            return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+        }
+
         const formData = await req.formData();
 
         const cardJson = formData.get('card') as string | null;
@@ -63,16 +71,34 @@ export async function POST(req: Request) {
 
         // Sanitize filename — only alphanumeric, underscores and hyphens
         const safeName = (card.name || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
-        const attachments: Attachment[] = [];
 
-        // 1. Original uploaded image — read buffer once, reuse for email + API sync
-        let originalImageBuffer: Buffer | null = null;
-        if (originalImage && originalImage.size > 0) {
-            originalImageBuffer = Buffer.from(await originalImage.arrayBuffer());
-            attachments.push({
-                filename: originalImage.name || `${safeName}_original.jpg`,
-                content: originalImageBuffer,
-            });
+        // Sanitize name used in the email subject — strip control chars / newlines
+        const subjectName = String(card.name ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 100) || 'unknown';
+
+        // Validate image attachments server-side (type + size); client-side checks are not trusted
+        const validateImageFile = async (file: File | null): Promise<{ buffer: Buffer | null; error?: string }> => {
+            if (!file || file.size === 0) return { buffer: null };
+            if (!file.type.startsWith('image/')) return { buffer: null, error: 'Attachments must be images.' };
+            if (file.size > MAX_EMAIL_IMAGE_BYTES) return { buffer: null, error: 'Images must be under 4MB.' };
+            return { buffer: Buffer.from(await file.arrayBuffer()), error: undefined };
+        };
+
+        const attachments: Attachment[] = [];
+        let totalAttachmentBytes = 0;
+
+        // 1. Original uploaded image
+        {
+            const { buffer, error } = await validateImageFile(originalImage);
+            if (error) return NextResponse.json({ error }, { status: 413 });
+            if (buffer) {
+                const budget = addAttachmentBytes(totalAttachmentBytes, buffer.length);
+                totalAttachmentBytes = budget.total;
+                if (budget.error) return NextResponse.json({ error: budget.error }, { status: 413 });
+                attachments.push({
+                    filename: originalImage!.name || `${safeName}_original.jpg`,
+                    content: buffer,
+                });
+            }
         }
 
         // 2. Photoshop data text file — commented out, not sent as attachment
@@ -91,21 +117,29 @@ export async function POST(req: Request) {
         //     });
         // }
 
-        // 4. Schema JSON (Card.json format for app import)
+        // Card capture screenshot (optional — may not be available on mobile)
+        {
+            const { buffer, error } = await validateImageFile(cardCapture);
+            if (error) return NextResponse.json({ error }, { status: 413 });
+            if (buffer) {
+                const budget = addAttachmentBytes(totalAttachmentBytes, buffer.length);
+                totalAttachmentBytes = budget.total;
+                if (budget.error) return NextResponse.json({ error: budget.error }, { status: 413 });
+                attachments.push({
+                    filename: cardCapture!.name || `${safeName}_card.jpg`,
+                    content: buffer,
+                });
+            }
+        }
+
         if (cardSchemaJSON) {
+            const schemaBytes = Buffer.byteLength(cardSchemaJSON);
+            const budget = addAttachmentBytes(totalAttachmentBytes, schemaBytes);
+            totalAttachmentBytes = budget.total;
+            if (budget.error) return NextResponse.json({ error: budget.error }, { status: 413 });
             attachments.push({
                 filename: `${safeName}_card.json`,
                 content: Buffer.from(cardSchemaJSON).toString('base64'),
-            });
-        }
-
-        // 4. Card capture screenshot (optional — may not be available on mobile)
-        let cardCaptureBuffer: Buffer | null = null;
-        if (cardCapture && cardCapture.size > 0) {
-            cardCaptureBuffer = Buffer.from(await cardCapture.arrayBuffer());
-            attachments.push({
-                filename: cardCapture.name || `${safeName}_card.jpg`,
-                content: cardCaptureBuffer,
             });
         }
 
@@ -135,9 +169,10 @@ export async function POST(req: Request) {
         const platform = card.socialPlatform || 'instagram';
         const isInstagram = platform.toLowerCase() === 'instagram';
         const igUsername = isInstagram ? extractIgUsername(card.socialLink) : '';
+        const igUsernameEncoded = encodeURIComponent(igUsername);
         const socialHtml = isInstagram
-            ? `<a href="http://ig.me/m/${igUsername}" style="color:#818cf8;text-decoration:none;">@${esc(igUsername)}</a>
-               &nbsp;<a href="http://ig.me/m/${igUsername}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
+            ? `<a href="http://ig.me/m/${igUsernameEncoded}" style="color:#818cf8;text-decoration:none;">@${esc(igUsername)}</a>
+               &nbsp;<a href="http://ig.me/m/${igUsernameEncoded}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
             : `${esc(card.socialLink)} (linktr.ee)`;
 
         // ── Contact preference (Telegram or Instagram handle when social is Linktree) ──────────────
@@ -146,12 +181,14 @@ export async function POST(req: Request) {
         const isInstagramContact = contactPlatform === 'instagram' && (card.socialPlatform || 'instagram') !== 'instagram';
         const telegramHandle = isTelegram ? String(card.telegramHandle || '').trim().replace(/^@/, '') : '';
         const igContactHandle = isInstagramContact ? extractIgUsername(String(card.instagramHandle || '')) : '';
+        const telegramEncoded = encodeURIComponent(telegramHandle);
+        const igContactEncoded = encodeURIComponent(igContactHandle);
         const contactHtml = isTelegram && telegramHandle
-            ? `<a href="https://t.me/${telegramHandle}" style="color:#38bdf8;text-decoration:none;">@${esc(telegramHandle)}</a>
-               &nbsp;<a href="https://t.me/${telegramHandle}" style="display:inline-block;margin-left:8px;background:#0088cc;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">✈️ Message on Telegram</a>`
+            ? `<a href="https://t.me/${telegramEncoded}" style="color:#38bdf8;text-decoration:none;">@${esc(telegramHandle)}</a>
+               &nbsp;<a href="https://t.me/${telegramEncoded}" style="display:inline-block;margin-left:8px;background:#0088cc;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">✈️ Message on Telegram</a>`
             : isInstagramContact && igContactHandle
-            ? `<a href="http://ig.me/m/${igContactHandle}" style="color:#818cf8;text-decoration:none;">@${esc(igContactHandle)}</a>
-               &nbsp;<a href="http://ig.me/m/${igContactHandle}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
+            ? `<a href="http://ig.me/m/${igContactEncoded}" style="color:#818cf8;text-decoration:none;">@${esc(igContactHandle)}</a>
+               &nbsp;<a href="http://ig.me/m/${igContactEncoded}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
             : '';
 
         // ── Email HTML ────────────────────────────────────────────────────────
@@ -193,22 +230,32 @@ export async function POST(req: Request) {
 
         const { data, error } = await resend.emails.send({
             from: 'Bone Battle <cards@codehunterlab.com>',
-            to: ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'],
-            subject: `New Bone Battle Card: ${card.name}${hasDogTricks ? ' 🐕' : ''}`,
+            to: CARD_REQUEST_RECIPIENTS,
+            subject: `New Bone Battle Card: ${subjectName}${hasDogTricks ? ' 🐕' : ''}`,
             html,
             attachments,
         });
 
         if (error) {
             console.error('Resend Error:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to send the card. Please try again.' }, { status: 500 });
         }
+
+        const emailDiagnostics = buildEmailDiagnostics({
+            resendData: data,
+            to: CARD_REQUEST_RECIPIENTS,
+            attachments,
+        });
+        console.log('[Resend email] queued:', emailDiagnostics);
 
         // ── Sync to CardDatabase ──────────────────────────────────────────────
         let syncResult: { ok: boolean; status?: number; body?: unknown; error?: string } = { ok: false };
         if (cardSchemaJSON) {
             const appApiBase = process.env.APP_API_BASE || 'https://bonebattle.base44.app';
-            const appApiKey = process.env.APP_API_KEY || 'bc55db07135e4fdf850a550300b46303';
+            const appApiKey = process.env.APP_API_KEY;
+            if (!appApiKey) {
+                console.error('[Base44 sync] APP_API_KEY is not configured — skipping sync');
+            } else {
             const appId = '69859fe3e323b5c0e80da0c3';
             try {
                 const parsedCard = JSON.parse(cardSchemaJSON);
@@ -248,7 +295,7 @@ export async function POST(req: Request) {
                     trade_consent: false,
                 };
                 // images sent via email attachments only; Base44 upload pending
-                console.log('[Base44 sync] POST payload (no images):', JSON.stringify({ ...payload, original_image_url: payload.original_image_url ? '[base64]' : undefined, card_png_url: payload.card_png_url ? '[base64]' : undefined }, null, 2));
+                console.log('[Base44 sync] POST card:', parsedCard.name ?? safeName);
                 const syncRes = await fetch(`${appApiBase}/api/apps/${appId}/entities/Card`, {
                     method: 'POST',
                     headers,
@@ -260,17 +307,18 @@ export async function POST(req: Request) {
                 if (!syncRes.ok) {
                     console.error('[Base44 sync] Failed:', syncRes.status, syncBody);
                 } else {
-                    console.log('[Base44 sync] OK:', syncRes.status, syncBody);
+                    console.log('[Base44 sync] OK:', syncRes.status);
                 }
             } catch (appErr: any) {
                 syncResult = { ok: false, error: appErr?.message ?? String(appErr) };
                 console.error('[Base44 sync] Exception:', appErr);
             }
+            }
         }
 
-        return NextResponse.json({ success: true, data, sync: syncResult });
+        return NextResponse.json({ success: true, data, email: emailDiagnostics, sync: syncResult });
     } catch (err: any) {
         console.error('Server Error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 });
     }
 }
