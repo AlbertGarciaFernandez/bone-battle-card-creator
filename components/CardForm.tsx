@@ -523,7 +523,7 @@ const CardForm: React.FC<CardFormProps> = ({
               <label htmlFor="existingSerialNumber" className="block text-xs font-medium text-slate-300 mb-1">Existing card serial number <span className="text-red-400">*</span></label>
               <input id="existingSerialNumber" type="text" value={card.serialNumber} maxLength={80} required
                 onChange={(event) => handleChange('serialNumber', event.target.value)}
-                placeholder="e.g. BB-12345" className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-amber-400 focus:outline-none" />
+                placeholder="e.g. 0541" className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-amber-400 focus:outline-none" />
             </div>
             <p className="rounded-lg border border-amber-500/30 bg-amber-950/30 px-3 py-2 text-xs leading-relaxed text-amber-200" role="note">
               Updates are generally limited to once a year. See the BoneBattle FAQs for details and exceptions.
