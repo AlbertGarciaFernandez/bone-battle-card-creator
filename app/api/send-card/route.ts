@@ -1,10 +1,14 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { isDeepStrictEqual } from 'node:util';
 import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
 import { MAX_EMAIL_IMAGE_BYTES, addAttachmentBytes } from '../../../lib/attachmentLimits.js';
 import { buildEmailDiagnostics } from '../../../lib/emailDiagnostics.js';
 import { buildCardSubmissionEmailSummary } from '../../../lib/cardSubmissionEmail.js';
 import { isCardUpdateValid } from '../../../lib/cardUpdateValidation.js';
+import { createPendingCardUpdateRequest } from '../../../lib/base44UpdateRequest.js';
+import { buildCardSubmissionSchema } from '../../../lib/cardSubmissionSchema.js';
+import { SHOE_SIZE_ROWS } from '../../../types';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const CARD_REQUEST_RECIPIENTS = ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'];
@@ -75,26 +79,26 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Choose whether this is a new card or an update request.' }, { status: 400 });
         }
         if (card.submissionType === 'update') {
-            const allowedUpdateSections = new Set(['image', 'links', 'profile', 'layout', 'boneValues', 'other']);
-            const updateSections = Array.isArray(card.updateSections) ? card.updateSections : [];
             const updateBoneTotal = [...Object.values(card.gear ?? {}), ...Object.values(card.kinks ?? {})]
                 .reduce((sum: number, value) => sum + (Number(value) || 0), 0);
-            if (
-                updateSections.length === 0 ||
-                updateSections.some((section: unknown) => typeof section !== 'string' || !allowedUpdateSections.has(section)) ||
-                card.updateConsent !== true
-            ) {
-                return NextResponse.json({ error: 'Select what changed and confirm your update request.' }, { status: 400 });
-            }
             if (!isCardUpdateValid({
                 ...card,
-                imageUrl: originalImage?.size ? 'uploaded-image' : card.imageUrl,
+                imageUrl: originalImage?.size || cardCapture?.size ? 'attached-image' : card.imageUrl,
                 totalBones: updateBoneTotal,
-            }, { imageAttachmentRequired: true, imageAttached: !!originalImage?.size })) {
-                return NextResponse.json({ error: 'Complete the fields for each selected update area.' }, { status: 400 });
+            }, { imageAttachmentRequired: true, imageAttached: !!(originalImage?.size || cardCapture?.size) })) {
+                return NextResponse.json({ error: 'Complete all card fields, add the existing card number and attach the photo.' }, { status: 400 });
             }
-            if (typeof card.updateDetails !== 'string' || card.updateDetails.length > 1000) {
-                return NextResponse.json({ error: 'Update details must be 1,000 characters or fewer.' }, { status: 400 });
+            if (!cardSchemaJSON) {
+                return NextResponse.json({ error: 'Missing full card JSON for the update.' }, { status: 400 });
+            }
+            try {
+                const submittedSchema = JSON.parse(cardSchemaJSON);
+                const expectedSchema = buildCardSubmissionSchema(card, SHOE_SIZE_ROWS);
+                if (!isDeepStrictEqual(submittedSchema, expectedSchema)) {
+                    return NextResponse.json({ error: 'Update JSON does not match the submitted card data.' }, { status: 400 });
+                }
+            } catch {
+                return NextResponse.json({ error: 'Invalid update JSON.' }, { status: 400 });
             }
         }
 
@@ -221,35 +225,27 @@ export async function POST(req: Request) {
             ? `<a href="http://ig.me/m/${igContactEncoded}" style="color:#818cf8;text-decoration:none;">@${esc(igContactHandle)}</a>
                &nbsp;<a href="http://ig.me/m/${igContactEncoded}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
             : '';
-        const includeUpdateLinks = card.submissionType !== 'update' || card.updateSections?.includes('links');
-        const socialLinkLabel = card.submissionType === 'update' && !includeUpdateLinks ? 'Social link for verification' : 'Social';
-        const includeUpdateBones = card.submissionType !== 'update' || card.updateSections?.includes('boneValues');
-        const includeUpdateProfile = card.submissionType !== 'update' || card.updateSections?.includes('profile');
-        const includeUpdateLayout = card.submissionType !== 'update' || card.updateSections?.includes('layout');
-        const includeUpdateOther = card.submissionType !== 'update' || card.updateSections?.includes('other');
-        const updateProfileHtml = includeUpdateProfile ? `
+        const profileHtml = `
           <div style="margin-top:16px;background:#1e293b;padding:16px;border-radius:8px;line-height:1.8;">
-            <p style="margin:0 0 6px;font-weight:bold;">${card.submissionType === 'update' ? 'Updated profile fields' : 'Profile details'}</p>
+            <p style="margin:0 0 6px;font-weight:bold;">Profile details</p>
             <p style="margin:0">Pup name: ${esc(card.name)}</p>
             <p style="margin:0">Hood color: ${esc(card.hoodColor)}</p>
             <p style="margin:0">Height: ${esc(card.height)}</p>
             <p style="margin:0">Pup birthday: ${esc(card.birthdate)}</p>
             <p style="margin:0">Shoe size: ${esc(card.shoeSize)}</p>
             <p style="margin:0">Country: ${esc(card.country)}</p>
-          </div>` : '';
-        const updateLayoutHtml = includeUpdateLayout ? `
+          </div>`;
+        const layoutHtml = `
           <div style="margin-top:16px;background:#1e293b;padding:16px;border-radius:8px;line-height:1.8;">
-            <p style="margin:0 0 6px;font-weight:bold;">${card.submissionType === 'update' ? 'Updated card positions' : 'Card positions'}</p>
+            <p style="margin:0 0 6px;font-weight:bold;">Card positions</p>
             <p style="margin:0">Name position: ${esc(card.namePosition)}</p>
             <p style="margin:0">Stats position: ${esc(card.statsPosition)}</p>
-          </div>` : '';
-        const updateBoneValuesHtml = includeUpdateBones ? `
+          </div>`;
+        const boneValuesHtml = `
           <div style="margin-top:16px;background:#1e293b;padding:16px;border-radius:8px;">
-            <p style="margin:0 0 6px;font-weight:bold;">${card.submissionType === 'update' ? 'Updated bone values' : 'Bone values'}</p>
+            <p style="margin:0 0 6px;font-weight:bold;">Bone values</p>
             <pre style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;">${esc(JSON.stringify({ gear: card.gear, kinks: card.kinks }, null, 2))}</pre>
-          </div>` : '';
-        const updateOtherHtml = includeUpdateOther && card.submissionType === 'update' ? `
-          <p style="margin:8px 0 0;"><strong>Online game settings:</strong> Collectable: ${card.isCollectable ? 'Yes' : 'No'}; Online playable: ${card.isOnlinePlayable ? 'Yes' : 'No'}; Tradeable: ${card.isAllowTrades ? 'Yes' : 'No'}.</p>` : '';
+          </div>`;
 
         // ── Email HTML ────────────────────────────────────────────────────────
         const html = `
@@ -261,18 +257,17 @@ export async function POST(req: Request) {
   <div style="background:#1e293b;padding:20px;border-radius:8px;line-height:2;">
     <p style="margin:0"><strong style="color:#94a3b8;">Pup Name:</strong> ${esc(card.name)}</p>
     <p style="margin:0"><strong style="color:#94a3b8;">Request Type:</strong> ${esc(submissionEmailSummary.requestLabel)}</p>
-    <p style="margin:0"><strong style="color:#94a3b8;">${socialLinkLabel}:</strong> ${socialHtml}</p>
-    ${includeUpdateLinks && contactHtml ? `<p style="margin:0"><strong style="color:#94a3b8;">Contact via:</strong> ${contactHtml}</p>` : ''}
-    ${includeUpdateBones ? `<p style="margin:0"><strong style="color:#94a3b8;">Total Bones:</strong> ${esc(card.totalBones ?? 'N/A')}</p>` : ''}
+    ${card.submissionType === 'update' ? `<p style="margin:0"><strong style="color:#94a3b8;">Existing Card Number:</strong> ${esc(card.serialNumber.trim())}</p>` : ''}
+    <p style="margin:0"><strong style="color:#94a3b8;">Social:</strong> ${socialHtml}</p>
+    ${contactHtml ? `<p style="margin:0"><strong style="color:#94a3b8;">Contact via:</strong> ${contactHtml}</p>` : ''}
+    <p style="margin:0"><strong style="color:#94a3b8;">Total Bones:</strong> ${esc(card.totalBones ?? 'N/A')}</p>
     ${card.newsletter ? '<p style="margin:0"><strong style="color:#34d399;">Newsletter:</strong> ✅ Subscribe me!</p>' : ''}
-    ${includeUpdateBones ? dogTricksHtml : ''}
+    ${dogTricksHtml}
   </div>
 
-  ${submissionEmailSummary.updateDetailsHtml}
-  ${updateProfileHtml}
-  ${updateLayoutHtml}
-  ${updateBoneValuesHtml}
-  ${updateOtherHtml}
+  ${profileHtml}
+  ${layoutHtml}
+  ${boneValuesHtml}
 
   <div style="margin-top:20px;background:#1e293b;padding:16px 20px;border-radius:8px;">
     <p style="margin:0 0 8px;font-weight:bold;color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:.05em;">Attachments</p>
@@ -298,7 +293,9 @@ export async function POST(req: Request) {
         const { data, error } = await resend.emails.send({
             from: 'Bone Battle <cards@codehunterlab.com>',
             to: CARD_REQUEST_RECIPIENTS,
-            subject: `${submissionEmailSummary.subjectLabel}: ${subjectName}${includeUpdateBones && hasDogTricks ? ' 🐕' : ''}`,
+            subject: card.submissionType === 'update'
+                ? `CARD UPDATE - ${subjectName} - ${card.serialNumber.trim().replace(/[\r\n\t]+/g, ' ')}`
+                : `${submissionEmailSummary.subjectLabel}: ${subjectName}${hasDogTricks ? ' 🐕' : ''}`,
             html,
             attachments,
         });
@@ -317,7 +314,33 @@ export async function POST(req: Request) {
 
         // ── Sync to CardDatabase ──────────────────────────────────────────────
         let syncResult: { ok: boolean; status?: number; body?: unknown; error?: string } = { ok: false };
-        if (cardSchemaJSON) {
+        if (card.submissionType === 'update' && cardSchemaJSON) {
+            const entityName = process.env.APP_UPDATE_REQUEST_ENTITY;
+            const apiKey = process.env.APP_API_KEY;
+            if (entityName === 'CardUpdateRequest' && apiKey) {
+                try {
+                    syncResult = await createPendingCardUpdateRequest({
+                        baseUrl: process.env.APP_API_BASE || 'https://bonebattle.base44.app',
+                        appId: '69859fe3e323b5c0e80da0c3',
+                        apiKey,
+                        entityName,
+                        payload: {
+                            status: 'pending',
+                            name: card.name,
+                            oldCardNumber: card.serialNumber.trim(),
+                            cardData: JSON.parse(cardSchemaJSON),
+                        },
+                    });
+                    if (!syncResult.ok) console.error('[Base44 update request] Failed:', syncResult.status, syncResult.body);
+                } catch (syncError) {
+                    syncResult = { ok: false, error: syncError instanceof Error ? syncError.message : String(syncError) };
+                    console.error('[Base44 update request] Exception:', syncError);
+                }
+            } else {
+                syncResult = { ok: false, error: 'Update request integration is not configured.' };
+            }
+        }
+        if (cardSchemaJSON && card.submissionType === 'new') {
             const appApiBase = process.env.APP_API_BASE || 'https://bonebattle.base44.app';
             const appApiKey = process.env.APP_API_KEY;
             if (!appApiKey) {

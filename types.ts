@@ -67,9 +67,7 @@ export type CardPosition =
 
 export interface CardData {
   submissionType: 'new' | 'update';
-  updateSections: string[];
-  updateDetails: string;
-  updateConsent: boolean;
+  serialNumber: string; // Existing serial number, required only for updates
   name: string; // Pup Name
   hoodColor: HoodColor;
   imageUrl?: string;

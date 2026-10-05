@@ -73,7 +73,7 @@ export default function AppHeader({ submissionType, canSend, onSend, onExportTXT
                                 ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 cursor-pointer animate-pulse'
                                 : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
-                        title={canSend ? 'Send to BoneBattleCards' : submissionType === 'update' ? 'Complete the required fields for the selected update areas' : 'Total bones must be 50–70 (or select Dog Tricks to balance)'}
+                        title={canSend ? 'Send to BoneBattleCards' : submissionType === 'update' ? 'Complete all card fields and enter the existing card number' : 'Total bones must be 50–70 (or select Dog Tricks to balance)'}
                     >
                         <Send size={16} />
                         Send

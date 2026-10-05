@@ -16,6 +16,7 @@ import html2canvas from 'html2canvas';
 import { prepareOriginalImageBlob } from '../lib/prepareOriginalImageBlob.js';
 import { optimizeUploadedImage } from '../lib/optimizeUploadedImage.js';
 import { isCardUpdateValid } from '../lib/cardUpdateValidation.js';
+import { buildCardSubmissionSchema } from '../lib/cardSubmissionSchema.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number):
 // ─── Initial state ────────────────────────────────────────────────────────────
 
 const INITIAL_CARD: CardData = {
-    submissionType: 'new', updateSections: [], updateDetails: '', updateConsent: false,
+    submissionType: 'new', serialNumber: '',
     name: '', hoodColor: HoodColor.RED, imageUrl: '',
     birthdate: '', height: '', shoeSize: '', socialLink: '', country: '',
     termsConsent: false, decisionConsent: false,
@@ -192,9 +193,6 @@ export default function AppClient() {
     }, []);
 
     const isCardValid = (): boolean => {
-        if (card.submissionType === 'update') {
-            return isCardUpdateValid({ ...card, totalBones: calculateTotalBones(card.gear, card.kinks) });
-        }
         const fields = [card.name, card.imageUrl, card.birthdate, card.height, card.shoeSize, card.socialLink, card.country];
         const rawBones = calculateTotalBones(card.gear, card.kinks);
         const missingBones = Math.max(0, 50 - rawBones);
@@ -206,7 +204,8 @@ export default function AppClient() {
             fields.every((f) => f && f.trim() !== '') &&
             /^\d{4}\.\d{2}$/.test(card.birthdate) &&
             card.termsConsent && card.decisionConsent &&
-            (rawBones >= 50 || tricksMakeUpShortfall) && rawBones <= 70
+            (rawBones >= 50 || tricksMakeUpShortfall) && rawBones <= 70 &&
+            (card.submissionType !== 'update' || isCardUpdateValid({ ...card, totalBones: rawBones }))
         );
     };
 
@@ -270,59 +269,7 @@ export default function AppClient() {
         return `${headers}\n${values}`;
     };
 
-    const getCardSchemaJSON = (): string => {
-        const gearMap: Record<string, string> = {
-            'Rubber': 'rubber', 'Leather': 'leather', 'Sox/Sneaker': 'skate',
-            'Jocks/Undies': 'underwear', 'Furry': 'suit', 'MX/Biker': 'mx',
-            'Sportswear': 'sports', 'Tactical/Unif.': 'tactical',
-        };
-        const kinkMap: Record<string, string> = {
-            'Outdoor/Dares': 'outdoor', 'Sniffing': 'sniffing', 'Edging': 'edging',
-            'Fisting': 'fisting', 'ABDL': 'abdl', 'Toys': 'toys',
-            'Cuckolding': 'cuckolding', 'Power Play': 'powerplay', 'Chastity': 'chastity',
-            'BDSM': 'bdsm', 'Verbal': 'verbal', 'Dirty': 'dirty',
-        };
-        const gear: Record<string, number> = {};
-        for (const [label, key] of Object.entries(gearMap)) gear[key] = card.gear[label] ?? 0;
-        const kinks: Record<string, number> = {};
-        for (const [label, key] of Object.entries(kinkMap)) kinks[key] = card.kinks[label] ?? 0;
-
-        // Per-category trick assignments (null = no trick needed / pending admin assignment)
-        const gear_tricks: Record<string, null> = Object.fromEntries(Object.keys(gear).map((k) => [k, null]));
-        const kinks_tricks: Record<string, null> = Object.fromEntries(Object.keys(kinks).map((k) => [k, null]));
-
-        // instaUsername is the primary field when platform is Instagram (default).
-        // social_link is only used when platform is 'other' (e.g. linktr.ee).
-        const isInstagram = (card.socialPlatform || 'instagram') === 'instagram';
-        const sizeRow = SHOE_SIZE_ROWS.find((s) => s.eu === card.shoeSize);
-        const shoeSizeFormatted = sizeRow
-            ? `${sizeRow.eu}EU / ${sizeRow.us}US`
-            : card.shoeSize;
-        return JSON.stringify({
-            name: card.name,
-            color: card.hoodColor.toLowerCase(),
-            pawsday: card.birthdate,
-            height: card.height,
-            shoe_size: shoeSizeFormatted,
-            ...(isInstagram
-                ? { instaUsername: card.socialLink }
-                : { social_link: card.socialLink }),
-            country: card.country,
-            gear,
-            kinks,
-            gear_tricks,
-            kinks_tricks,
-            good_boy_title: 'Good Boy',
-            rarity: 'common',
-            is_custom: true,
-            is_published: false,
-            is_torn: false,
-            is_sample: false,
-            is_collectable_only: card.isCollectable ?? false,
-            is_online_playable: card.isOnlinePlayable ?? false,
-            allow_trades: card.isAllowTrades ?? false,
-        }, null, 2);
-    };
+    const getCardSchemaJSON = (): string => JSON.stringify(buildCardSubmissionSchema(card, SHOE_SIZE_ROWS), null, 2);
 
     const handleExportJSON = () =>
         downloadFile(getCardSchemaJSON(), `${card.name || 'card'}_card.json`, 'application/json;charset=utf-8');
@@ -343,24 +290,22 @@ export default function AppClient() {
 
             let capturedCardImage: string | null = null;
             let capturedCardBlob: Blob | null = null;
-            if (card.submissionType !== 'update') {
-                try {
-                    if (isIOS) {
-                        const canvas = await html2canvas(node, { useCORS: true, allowTaint: false, backgroundColor: '#000000', scale: 1, logging: false, width: 360 });
-                        capturedCardBlob = await canvasToBlob(canvas, 'image/jpeg', 0.8);
-                    } else {
-                        capturedCardImage = await htmlToImage.toPng(node, {
-                            quality: 0.95, backgroundColor: '#000000', cacheBust: false, pixelRatio: 1, width: 360,
-                            style: { transform: 'scale(1)', transformOrigin: 'top left', borderRadius: '0', margin: '0' },
-                        });
-                    }
-                } catch (e) { console.error('Card capture failed:', e); }
-            }
+            try {
+                if (isIOS) {
+                    const canvas = await html2canvas(node, { useCORS: true, allowTaint: false, backgroundColor: '#000000', scale: 1, logging: false, width: 360 });
+                    capturedCardBlob = await canvasToBlob(canvas, 'image/jpeg', 0.8);
+                } else {
+                    capturedCardImage = await htmlToImage.toPng(node, {
+                        quality: 0.95, backgroundColor: '#000000', cacheBust: false, pixelRatio: 1, width: 360,
+                        style: { transform: 'scale(1)', transformOrigin: 'top left', borderRadius: '0', margin: '0' },
+                    });
+                }
+            } catch (e) { console.error('Card capture failed:', e); }
 
             let originalBlob: Blob | null = null;
             let originalFilename: string | null = null;
             let imageOptimization: Record<string, unknown> | null = null;
-            if (card.imageUrl && (card.submissionType !== 'update' || card.updateSections.includes('image'))) {
+            if (card.imageUrl) {
                 try {
                     if (uploadedImageFileRef.current) {
                         const optimizedImage = await optimizeUploadedImage(uploadedImageFileRef.current);
@@ -394,17 +339,14 @@ export default function AppClient() {
             }
 
             const cardCaptureBlob = capturedCardBlob ?? (capturedCardImage ? await compressToBlob(capturedCardImage, 800, 0.7) : null);
-            if (card.submissionType === 'new' && !originalBlob && !cardCaptureBlob) throw new Error('Could not process your image. Please try a different photo.');
-            if (card.submissionType === 'update' && card.updateSections.includes('image') && !originalBlob) {
-                throw new Error('Could not process the updated image. Please try another photo.');
-            }
+            if (!originalBlob && !cardCaptureBlob) throw new Error('Could not process your image. Please try a different photo.');
 
             const cardWithoutImage = { ...card };
             delete cardWithoutImage.imageUrl;
             const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), captureFailed: !cardCaptureBlob, imageOptimization });
             const textPart = getPhotoshopTXTContent();
             const csvPart = getCSVContent();
-            const schemaJsonPart = card.submissionType === 'update' ? '' : getCardSchemaJSON();
+            const schemaJsonPart = getCardSchemaJSON();
             const totalSize = (originalBlob?.size ?? 0) + (cardCaptureBlob?.size ?? 0) + new Blob([jsonPart]).size + new Blob([textPart]).size + new Blob([csvPart]).size + new Blob([schemaJsonPart]).size;
 
             if (totalSize > 3.5 * 1024 * 1024) throw new Error(`File size is still too large after optimization (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try another photo. For help with the online form, visit the website FAQs.`);

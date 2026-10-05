@@ -16,6 +16,7 @@ Built with Next.js (App Router), React 19, TypeScript and Tailwind CSS.
    - `RESEND_API_KEY` — [Resend](https://resend.com) API key for sending card submission emails
    - `APP_API_KEY` — Base44 API key used to sync submitted cards to the card database
    - `APP_API_BASE` — Base44 app base URL (e.g. `https://bonebattle.base44.app`)
+   - `APP_UPDATE_REQUEST_ENTITY` — optional; set to `CardUpdateRequest` once the separate Base44 review entity exists (do not point it at `Card`)
    - `STRIPE_SECRET_KEY` — Stripe secret key for the tip-jar checkout
    - `GEMINI_API_KEY` — [Google AI Studio](https://aistudio.google.com/apikey) key for AI image generation
 3. Run the app:
@@ -38,5 +39,6 @@ Built with Next.js (App Router), React 19, TypeScript and Tailwind CSS.
 - **Security headers**: `proxy.ts` generates a per-request Content-Security-Policy nonce (see `lib/csp.mjs`, tested in `test/csp.test.mjs`).
 - **AI generation** runs server-side only via `/api/generate`; the Gemini key never reaches the browser.
 - **Card submission** is handled by `/api/send-card`: it emails the card data + attachments via Resend and syncs the card to the Base44 database.
+- **Existing-card updates** use exactly the same complete card JSON and image attachments as a new card. The JSON additionally contains `action: "update"` and `oldCardNumber` (new cards use `action: "new"`). No new card number is generated and no existing `Card` record is changed. When `APP_UPDATE_REQUEST_ENTITY=CardUpdateRequest` and `APP_API_KEY` are configured, Base44 receives a separate record with `status: "pending"`, `name`, `oldCardNumber`, and `cardData` (the full emailed JSON). Until configured, the email is still sent and the Base44 sync is reported as not configured. Create the `CardUpdateRequest` entity with those fields (`cardData` as object/JSON). The photo stays as an email attachment; it is not uploaded to Base44.
 - **Payments** are handled by `/api/create-checkout-session` (Stripe Checkout).
 - Both API routes apply per-IP rate limiting (`lib/rateLimit.ts`) and validate input server-side.
