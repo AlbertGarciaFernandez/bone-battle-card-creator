@@ -5,6 +5,7 @@ import NextImage from 'next/image';
 import { Download, FileText, Send, HelpCircle, Gift } from 'lucide-react';
 
 interface AppHeaderProps {
+    submissionType: 'new' | 'update';
     canSend: boolean;
     onSend: () => void;
     onExportTXT: () => void;
@@ -14,7 +15,7 @@ interface AppHeaderProps {
     onScrollToFAQ?: () => void;
 }
 
-export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, onExportJSON, onScrollToSupport, onScrollToFAQ }: AppHeaderProps) {
+export default function AppHeader({ submissionType, canSend, onSend, onExportTXT, onExportCSV, onExportJSON, onScrollToSupport, onScrollToFAQ }: AppHeaderProps) {
     return (
         <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -33,32 +34,32 @@ export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, o
                         height={32}
                         className="h-8 w-auto object-contain drop-shadow-md hidden md:block"
                     />
-                    <div className="bg-slate-800 text-bone-100 font-black tracking-widest text-xs px-2 py-1 rounded-md uppercase ml-2 border border-slate-700 shadow-inner">
-                        Card Creator Official
+                    <div className="bg-slate-800 text-bone-100 font-black tracking-widest text-[9px] sm:text-xs px-2 py-1 rounded-md uppercase ml-2 border border-slate-700 shadow-inner">
+                        Card Creator Preview
+                    </div>
+                    <div className={`font-black tracking-widest text-[9px] sm:text-xs px-2 py-1 rounded-md uppercase border shadow-inner ${submissionType === 'update' ? 'bg-amber-950/60 text-amber-200 border-amber-700/60' : 'bg-slate-800 text-bone-100 border-slate-700'}`}>
+                        {submissionType === 'update' ? 'Update Existing Card' : 'New Card'}
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* Support Link */}
                     {onScrollToSupport && (
                         <button
+                            type="button"
                             onClick={onScrollToSupport}
                             className="hidden sm:flex items-center gap-2 text-slate-300 hover:text-white text-sm px-3 py-2 rounded-lg border border-slate-700 hover:border-orange-500/50 transition-colors"
-                            title="Jump to Support section"
                         >
                             <Gift size={14} />
-                            Support
+                            Support BoneBattle
                         </button>
                     )}
-                    
-                    {/* FAQ Link */}
                     {onScrollToFAQ && (
                         <button
+                            type="button"
                             onClick={onScrollToFAQ}
                             className="hidden sm:flex items-center gap-2 text-slate-300 hover:text-white text-sm px-3 py-2 rounded-lg border border-slate-700 hover:border-blue-500/50 transition-colors"
-                            title="Jump to FAQ section"
                         >
                             <HelpCircle size={14} />
-                            FAQ
+                            FAQs
                         </button>
                     )}
                     
@@ -72,7 +73,7 @@ export default function AppHeader({ canSend, onSend, onExportTXT, onExportCSV, o
                                 ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 cursor-pointer animate-pulse'
                                 : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
-                        title={canSend ? 'Send to Albert' : 'Total bones must be 50–70 (or select Dog Tricks to balance)'}
+                        title={canSend ? 'Send to BoneBattleCards' : submissionType === 'update' ? 'Complete the required fields for the selected update areas' : 'Total bones must be 50–70 (or select Dog Tricks to balance)'}
                     >
                         <Send size={16} />
                         Send

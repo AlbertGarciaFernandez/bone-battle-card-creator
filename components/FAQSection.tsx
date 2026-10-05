@@ -2,40 +2,21 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import Link from 'next/link';
 
 const FAQ_ITEMS = [
-    {
-        question: "How long does it take to get my card?",
-        answer: "Cards are usually processed within a few days depending on the volume of requests. BoneBattleCards will confirm with you via DM once your card is added to the collection files."
-    },
     {
         question: "Can I use a custom image?",
         answer: "Yes! You can upload any photo you have the rights to. Photos up to 20MB are accepted and optimized automatically before sending."
     },
     {
-        question: "Why do I need to send a Verification DM?",
-        answer: "To ensure that the person requesting the card is the actual owner of the persona/images. This prevents people from submitting troll cards or using other people's images without permission."
-    },
-    {
-        question: "Can I change my stats later?",
-        answer: "Once a card is finalized and published, changes are generally not allowed unless there's an error. Make sure you review your preview carefully before submitting!"
-    },
-    {
         question: "What happens if the card capture fails on iOS?",
-        answer: "iOS submissions are supported, but card capture can sometimes fail. If that happens, try submitting again or contact BoneBattleCards via Instagram for help."
+        answer: "Try submitting again. If the online form continues to have problems, use the website's help options rather than contacting an individual card creator."
     },
     {
         question: "What if my submission fails or the upload is too large?",
         answer: "The app checks image size and optimizes large photos before sending. If submission still fails, try another photo, check your connection, and follow the on-screen error message for the next step."
     },
-    {
-        question: "How do the 'Dog Tricks' work?",
-        answer: "If your gear and kinks total score is under 50 bones, you can select 'Dog Tricks' to boost your score up to the 50 minimum required."
-    },
-    {
-        question: "What can I do with my card once it's approved?",
-        answer: "Once your card is in the collection, you can print it to hold in real life, share it on social media to show off your battle persona, or start collecting other players' cards to build your deck and trade with friends!"
-    }
 ];
 
 export default function FAQSection() {
@@ -56,7 +37,9 @@ export default function FAQSection() {
                             className={`border ${isOpen ? 'border-blue-500 bg-blue-950/20' : 'border-slate-800 bg-slate-900/50'} rounded-xl transition-all overflow-hidden`}
                         >
                             <button
-                                className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none"
+                                type="button"
+                                aria-expanded={isOpen}
+                                className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400"
                                 onClick={() => setOpenIndex(isOpen ? null : index)}
                             >
                                 <span className={`font-bold ${isOpen ? 'text-blue-200' : 'text-slate-200'}`}>{item.question}</span>
@@ -74,6 +57,11 @@ export default function FAQSection() {
                         </div>
                     );
                 })}
+            </div>
+            <div className="mt-6 text-center">
+                <Link href="https://www.bonebattle.me/faqs" className="inline-flex items-center text-sm font-bold text-blue-400 hover:text-blue-300 underline underline-offset-4">
+                    For card and game FAQs, visit BoneBattle.me
+                </Link>
             </div>
         </div>
     );

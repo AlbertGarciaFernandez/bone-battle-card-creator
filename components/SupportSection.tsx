@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Gift, Globe, Heart, CheckCircle, Mail, Sparkles } from 'lucide-react';
+import { Gift, Globe, Heart, Sparkles } from 'lucide-react';
 
 interface SupportSectionProps {
     onDeveloperSupport: () => void;
@@ -25,54 +25,31 @@ export default function SupportSection({ onDeveloperSupport }: SupportSectionPro
                     {"If you want to support the creators and developers, here are some ways you can help:"}
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6 items-stretch">
                     {/* Option A */}
-                    <div className="flex flex-col gap-3 p-5 rounded-xl bg-orange-950/20 border border-orange-500/20 hover:border-orange-500/40 transition-all">
+                    <div className="flex min-h-48 h-full flex-col justify-between gap-6 p-6 rounded-xl bg-orange-950/20 border border-orange-500/20 hover:border-orange-500/50 transition-colors">
                         <div className="flex items-center gap-2">
                             <div className="bg-orange-500/20 p-2 rounded-lg">
                                 <Heart size={18} className="text-orange-400" />
                             </div>
                             <span className="text-orange-400 font-bold">BoneBattleCards (The Creator)</span>
                         </div>
-                        <p className="text-xs text-slate-300 mb-2">Send a gift card or physical gift</p>
-                        <div className="bg-black/30 p-2 rounded">
-                            <p className="text-[11px] text-slate-400">Email: <span className="text-orange-300 font-mono font-bold">bonebattlecards@gmail.com</span></p>
-                        </div>
-                        <a 
-                            href="https://amzn.eu/d/70zAVcn" 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                        <a
+                            href="https://www.bonebattle.me/team-bonebattle/how-to-support"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-xs bg-orange-600 hover:bg-orange-500 px-3 py-2 rounded-lg text-white font-bold text-center no-underline transition-all"
                         >
-                            Amazon.de Wishlist
-                        </a>
-                    </div>
-
-                    {/* Option B */}
-                    <div className="flex flex-col gap-3 p-5 rounded-xl bg-slate-800/40 border border-slate-700 hover:border-slate-500/40 transition-all">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-slate-700/40 p-2 rounded-lg">
-                                <Gift size={18} className="text-slate-400" />
-                            </div>
-                            <span className="text-slate-200 font-bold">BoneBattleCards' Wishlist</span>
-                        </div>
-                        <p className="text-xs text-slate-300 mb-2">Browse items and send gifts directly</p>
-                        <a 
-                            href="https://throne.com/joker_jx" 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-blue-400 font-bold text-center no-underline transition-all"
-                        >
-                            Visit Throne List
+                            See how you can support BoneBattle
                         </a>
                     </div>
 
                     {/* Option C */}
-                    <div className="relative group overflow-hidden p-5 rounded-xl bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-500/30 shadow-lg shadow-blue-900/10 hover:border-blue-400/50 transition-all">
+                    <div className="relative group h-full min-h-48 flex flex-col overflow-hidden p-6 rounded-xl bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-500/30 shadow-lg shadow-blue-900/10 hover:border-blue-400/50 transition-colors">
                         <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                             <Sparkles size={50} className="text-blue-400" />
                         </div>
-                        <div className="relative z-10 space-y-3">
+                        <div className="relative z-10 flex h-full flex-col gap-3">
                             <div className="flex items-center gap-2">
                                 <div className="p-2 bg-blue-500/20 rounded-lg">
                                     <Globe size={18} className="text-blue-400" />
@@ -88,7 +65,7 @@ export default function SupportSection({ onDeveloperSupport }: SupportSectionPro
                             <button
                                 type="button"
                                 onClick={onDeveloperSupport}
-                                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-tighter transition-all transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 active:scale-95"
+                                className="mt-auto w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-tighter transition-colors"
                             >
                                 <Heart size={14} fill="currentColor" />
                                 Support Lab

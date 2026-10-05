@@ -3,9 +3,7 @@
 import React, { useState, useReducer, useMemo } from 'react';
 import CardPreview from './CardPreview';
 import CardForm from './CardForm';
-import GameGuideModal from './GameGuideModal';
 import SendModal from './SendModal';
-import SupportModal from './SupportModal';
 import FAQSection from './FAQSection';
 import SupportSection from './SupportSection';
 import AppHeader from './AppHeader';
@@ -17,6 +15,7 @@ import * as htmlToImage from 'html-to-image';
 import html2canvas from 'html2canvas';
 import { prepareOriginalImageBlob } from '../lib/prepareOriginalImageBlob.js';
 import { optimizeUploadedImage } from '../lib/optimizeUploadedImage.js';
+import { isCardUpdateValid } from '../lib/cardUpdateValidation.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,6 +122,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number):
 // ─── Initial state ────────────────────────────────────────────────────────────
 
 const INITIAL_CARD: CardData = {
+    submissionType: 'new', updateSections: [], updateDetails: '', updateConsent: false,
     name: '', hoodColor: HoodColor.RED, imageUrl: '',
     birthdate: '', height: '', shoeSize: '', socialLink: '', country: '',
     termsConsent: false, decisionConsent: false,
@@ -136,20 +136,14 @@ const INITIAL_CARD: CardData = {
 
 // ─── Modal reducer ────────────────────────────────────────────────────────────
 
-type ModalState = { showSend: boolean; showSupport: boolean; showGuide: boolean; guideTab: 'basics' | 'diagram' };
+type ModalState = { showSend: boolean };
 type ModalAction =
-    | { type: 'OPEN_SEND' } | { type: 'CLOSE_SEND' }
-    | { type: 'OPEN_SUPPORT' } | { type: 'CLOSE_SUPPORT' }
-    | { type: 'OPEN_GUIDE'; tab: 'basics' | 'diagram' } | { type: 'CLOSE_GUIDE' };
+    | { type: 'OPEN_SEND' } | { type: 'CLOSE_SEND' };
 
 const modalReducer = (state: ModalState, action: ModalAction): ModalState => {
     switch (action.type) {
         case 'OPEN_SEND':    return { ...state, showSend: true };
         case 'CLOSE_SEND':   return { ...state, showSend: false };
-        case 'OPEN_SUPPORT': return { ...state, showSupport: true };
-        case 'CLOSE_SUPPORT':return { ...state, showSupport: false };
-        case 'OPEN_GUIDE':   return { ...state, showGuide: true, guideTab: action.tab };
-        case 'CLOSE_GUIDE':  return { ...state, showGuide: false };
         default:             return state;
     }
 };
@@ -180,23 +174,16 @@ export default function AppClient() {
     const uploadedImageFileRef = React.useRef<File | null>(null);
     const [genState, setGenState] = useState({ isGenerating: false, error: null as string | null });
     const [modals, dispatchModal] = useReducer(modalReducer, {
-        showSend: false, showSupport: false, showGuide: false, guideTab: 'basics' as const,
+        showSend: false,
     });
     const [sendState, dispatchSend] = useReducer(sendReducer, {
         isSending: false, status: 'idle' as const, error: null,
     });
 
-    // Refs for scroll navigation
     const supportRef = React.useRef<HTMLDivElement>(null);
     const faqRef = React.useRef<HTMLDivElement>(null);
-
-    const scrollToSupport = () => {
-        supportRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const scrollToFAQ = () => {
-        faqRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    const scrollToSupport = () => supportRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToFAQ = () => faqRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     const isIOS = useMemo(() => {
         if (typeof navigator === 'undefined') return false;
@@ -205,6 +192,9 @@ export default function AppClient() {
     }, []);
 
     const isCardValid = (): boolean => {
+        if (card.submissionType === 'update') {
+            return isCardUpdateValid({ ...card, totalBones: calculateTotalBones(card.gear, card.kinks) });
+        }
         const fields = [card.name, card.imageUrl, card.birthdate, card.height, card.shoeSize, card.socialLink, card.country];
         const rawBones = calculateTotalBones(card.gear, card.kinks);
         const missingBones = Math.max(0, 50 - rawBones);
@@ -353,22 +343,24 @@ export default function AppClient() {
 
             let capturedCardImage: string | null = null;
             let capturedCardBlob: Blob | null = null;
-            try {
-                if (isIOS) {
-                    const canvas = await html2canvas(node, { useCORS: true, allowTaint: false, backgroundColor: '#000000', scale: 1, logging: false, width: 360 });
-                    capturedCardBlob = await canvasToBlob(canvas, 'image/jpeg', 0.8);
-                } else {
-                    capturedCardImage = await htmlToImage.toPng(node, {
-                        quality: 0.95, backgroundColor: '#000000', cacheBust: false, pixelRatio: 1, width: 360,
-                        style: { transform: 'scale(1)', transformOrigin: 'top left', borderRadius: '0', margin: '0' },
-                    });
-                }
-            } catch (e) { console.error('Card capture failed:', e); }
+            if (card.submissionType !== 'update') {
+                try {
+                    if (isIOS) {
+                        const canvas = await html2canvas(node, { useCORS: true, allowTaint: false, backgroundColor: '#000000', scale: 1, logging: false, width: 360 });
+                        capturedCardBlob = await canvasToBlob(canvas, 'image/jpeg', 0.8);
+                    } else {
+                        capturedCardImage = await htmlToImage.toPng(node, {
+                            quality: 0.95, backgroundColor: '#000000', cacheBust: false, pixelRatio: 1, width: 360,
+                            style: { transform: 'scale(1)', transformOrigin: 'top left', borderRadius: '0', margin: '0' },
+                        });
+                    }
+                } catch (e) { console.error('Card capture failed:', e); }
+            }
 
             let originalBlob: Blob | null = null;
             let originalFilename: string | null = null;
             let imageOptimization: Record<string, unknown> | null = null;
-            if (card.imageUrl) {
+            if (card.imageUrl && (card.submissionType !== 'update' || card.updateSections.includes('image'))) {
                 try {
                     if (uploadedImageFileRef.current) {
                         const optimizedImage = await optimizeUploadedImage(uploadedImageFileRef.current);
@@ -402,23 +394,26 @@ export default function AppClient() {
             }
 
             const cardCaptureBlob = capturedCardBlob ?? (capturedCardImage ? await compressToBlob(capturedCardImage, 800, 0.7) : null);
-            if (!originalBlob && !cardCaptureBlob) throw new Error('Could not process your image. Please try a different photo.');
+            if (card.submissionType === 'new' && !originalBlob && !cardCaptureBlob) throw new Error('Could not process your image. Please try a different photo.');
+            if (card.submissionType === 'update' && card.updateSections.includes('image') && !originalBlob) {
+                throw new Error('Could not process the updated image. Please try another photo.');
+            }
 
             const cardWithoutImage = { ...card };
             delete cardWithoutImage.imageUrl;
             const jsonPart = JSON.stringify({ ...cardWithoutImage, totalBones: calculateTotalBones(card.gear, card.kinks), captureFailed: !cardCaptureBlob, imageOptimization });
             const textPart = getPhotoshopTXTContent();
             const csvPart = getCSVContent();
-            const schemaJsonPart = getCardSchemaJSON();
+            const schemaJsonPart = card.submissionType === 'update' ? '' : getCardSchemaJSON();
             const totalSize = (originalBlob?.size ?? 0) + (cardCaptureBlob?.size ?? 0) + new Blob([jsonPart]).size + new Blob([textPart]).size + new Blob([csvPart]).size + new Blob([schemaJsonPart]).size;
 
-            if (totalSize > 3.5 * 1024 * 1024) throw new Error(`File size is still too large after optimization (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try another photo or send the original by DM after submitting.`);
+            if (totalSize > 3.5 * 1024 * 1024) throw new Error(`File size is still too large after optimization (${(totalSize / 1024 / 1024).toFixed(1)}MB). Please try another photo. For help with the online form, visit the website FAQs.`);
 
             const formData = new FormData();
             formData.append('card', jsonPart);
             formData.append('cardText', textPart);
             formData.append('cardCSV', csvPart);
-            formData.append('cardSchemaJSON', schemaJsonPart);
+            if (schemaJsonPart) formData.append('cardSchemaJSON', schemaJsonPart);
             if (originalBlob) {
                 formData.append('originalImage', originalBlob, originalFilename || `${card.name.replace(/\s+/g, '_')}_original_optimized.jpg`);
             }
@@ -468,22 +463,21 @@ export default function AppClient() {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-8 relative">
 
-            <GameGuideModal isOpen={modals.showGuide} onClose={() => dispatchModal({ type: 'CLOSE_GUIDE' })} initialTab={modals.guideTab} />
             <SendModal
                 isOpen={modals.showSend} onClose={() => dispatchModal({ type: 'CLOSE_SEND' })}
                 contactPlatform={card.contactPlatform} telegramHandle={card.telegramHandle}
+                submissionType={card.submissionType}
                 submitStatus={sendState.status} sendError={sendState.error}
                 isSending={sendState.isSending} isSendDisabled={isSendDisabled}
                 onSubmit={handleFinalizeSend} onClearError={() => dispatchSend({ type: 'CLEAR_ERROR' })}
                 onContinue={() => {
                     dispatchModal({ type: 'CLOSE_SEND' });
-                    dispatchModal({ type: 'OPEN_SUPPORT' });
                     dispatchSend({ type: 'RESET_STATUS' });
                 }}
             />
-            <SupportModal isOpen={modals.showSupport} onClose={() => dispatchModal({ type: 'CLOSE_SUPPORT' })} onDeveloperSupport={handleDeveloperSupport} />
 
             <AppHeader
+                submissionType={card.submissionType}
                 canSend={canSend}
                 onSend={() => dispatchModal({ type: 'OPEN_SEND' })}
                 onExportTXT={handleExportPhotoshopTXT}
@@ -501,7 +495,7 @@ export default function AppClient() {
                         <div>
                             <p className="text-sm font-bold text-amber-200">iOS Device Detected</p>
                             <p className="text-xs text-amber-300/80 mt-1">
-                                Submission from iOS is supported. If the card capture fails, please try again or contact BoneBattleCards on Instagram for help.
+                                Submission from iOS is supported. If card capture fails, try submitting again. For ongoing online form issues, use the website&apos;s FAQs and help options.
                             </p>
                         </div>
                     </div>
@@ -534,6 +528,9 @@ export default function AppClient() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
                     <div className="lg:col-span-6 xl:col-span-6 order-2 lg:order-1">
+                        <div className="mb-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm leading-relaxed text-slate-300">
+                            <p>Use this online form to preview how your card could look and submit your information to the BoneBattleCards team. The final official card is created by an approved card creator.</p>
+                        </div>
                         <CardForm
                             card={card}
                             setCard={setCard}
@@ -562,13 +559,12 @@ export default function AppClient() {
                 <div ref={supportRef}>
                     <SupportSection onDeveloperSupport={handleDeveloperSupport} />
                 </div>
-
                 <div ref={faqRef}>
                     <FAQSection />
                 </div>
             </main>
 
-            <AppFooter onOpenGuide={(tab) => dispatchModal({ type: 'OPEN_GUIDE', tab })} />
+            <AppFooter />
 
         </div>
     );

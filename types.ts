@@ -66,6 +66,10 @@ export type CardPosition =
   | 'right-top' | 'right-middle' | 'right-bottom';
 
 export interface CardData {
+  submissionType: 'new' | 'update';
+  updateSections: string[];
+  updateDetails: string;
+  updateConsent: boolean;
   name: string; // Pup Name
   hoodColor: HoodColor;
   imageUrl?: string;

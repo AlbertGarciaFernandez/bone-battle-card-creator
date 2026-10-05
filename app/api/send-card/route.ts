@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
 import { MAX_EMAIL_IMAGE_BYTES, addAttachmentBytes } from '../../../lib/attachmentLimits.js';
 import { buildEmailDiagnostics } from '../../../lib/emailDiagnostics.js';
+import { buildCardSubmissionEmailSummary } from '../../../lib/cardSubmissionEmail.js';
+import { isCardUpdateValid } from '../../../lib/cardUpdateValidation.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const CARD_REQUEST_RECIPIENTS = ['albert@codehunterlab.com', 'pup.joker.jx@gmail.com'];
@@ -68,6 +70,35 @@ export async function POST(req: Request) {
         } catch {
             return NextResponse.json({ error: 'Invalid card data' }, { status: 400 });
         }
+
+        if (card.submissionType !== 'new' && card.submissionType !== 'update') {
+            return NextResponse.json({ error: 'Choose whether this is a new card or an update request.' }, { status: 400 });
+        }
+        if (card.submissionType === 'update') {
+            const allowedUpdateSections = new Set(['image', 'links', 'profile', 'layout', 'boneValues', 'other']);
+            const updateSections = Array.isArray(card.updateSections) ? card.updateSections : [];
+            const updateBoneTotal = [...Object.values(card.gear ?? {}), ...Object.values(card.kinks ?? {})]
+                .reduce((sum: number, value) => sum + (Number(value) || 0), 0);
+            if (
+                updateSections.length === 0 ||
+                updateSections.some((section: unknown) => typeof section !== 'string' || !allowedUpdateSections.has(section)) ||
+                card.updateConsent !== true
+            ) {
+                return NextResponse.json({ error: 'Select what changed and confirm your update request.' }, { status: 400 });
+            }
+            if (!isCardUpdateValid({
+                ...card,
+                imageUrl: originalImage?.size ? 'uploaded-image' : card.imageUrl,
+                totalBones: updateBoneTotal,
+            }, { imageAttachmentRequired: true, imageAttached: !!originalImage?.size })) {
+                return NextResponse.json({ error: 'Complete the fields for each selected update area.' }, { status: 400 });
+            }
+            if (typeof card.updateDetails !== 'string' || card.updateDetails.length > 1000) {
+                return NextResponse.json({ error: 'Update details must be 1,000 characters or fewer.' }, { status: 400 });
+            }
+        }
+
+        const submissionEmailSummary = buildCardSubmissionEmailSummary(card);
 
         // Sanitize filename — only alphanumeric, underscores and hyphens
         const safeName = (card.name || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -190,22 +221,58 @@ export async function POST(req: Request) {
             ? `<a href="http://ig.me/m/${igContactEncoded}" style="color:#818cf8;text-decoration:none;">@${esc(igContactHandle)}</a>
                &nbsp;<a href="http://ig.me/m/${igContactEncoded}" style="display:inline-block;margin-left:8px;background:#833ab4;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;text-decoration:none;">📩 DM on Instagram</a>`
             : '';
+        const includeUpdateLinks = card.submissionType !== 'update' || card.updateSections?.includes('links');
+        const socialLinkLabel = card.submissionType === 'update' && !includeUpdateLinks ? 'Social link for verification' : 'Social';
+        const includeUpdateBones = card.submissionType !== 'update' || card.updateSections?.includes('boneValues');
+        const includeUpdateProfile = card.submissionType !== 'update' || card.updateSections?.includes('profile');
+        const includeUpdateLayout = card.submissionType !== 'update' || card.updateSections?.includes('layout');
+        const includeUpdateOther = card.submissionType !== 'update' || card.updateSections?.includes('other');
+        const updateProfileHtml = includeUpdateProfile ? `
+          <div style="margin-top:16px;background:#1e293b;padding:16px;border-radius:8px;line-height:1.8;">
+            <p style="margin:0 0 6px;font-weight:bold;">${card.submissionType === 'update' ? 'Updated profile fields' : 'Profile details'}</p>
+            <p style="margin:0">Pup name: ${esc(card.name)}</p>
+            <p style="margin:0">Hood color: ${esc(card.hoodColor)}</p>
+            <p style="margin:0">Height: ${esc(card.height)}</p>
+            <p style="margin:0">Pup birthday: ${esc(card.birthdate)}</p>
+            <p style="margin:0">Shoe size: ${esc(card.shoeSize)}</p>
+            <p style="margin:0">Country: ${esc(card.country)}</p>
+          </div>` : '';
+        const updateLayoutHtml = includeUpdateLayout ? `
+          <div style="margin-top:16px;background:#1e293b;padding:16px;border-radius:8px;line-height:1.8;">
+            <p style="margin:0 0 6px;font-weight:bold;">${card.submissionType === 'update' ? 'Updated card positions' : 'Card positions'}</p>
+            <p style="margin:0">Name position: ${esc(card.namePosition)}</p>
+            <p style="margin:0">Stats position: ${esc(card.statsPosition)}</p>
+          </div>` : '';
+        const updateBoneValuesHtml = includeUpdateBones ? `
+          <div style="margin-top:16px;background:#1e293b;padding:16px;border-radius:8px;">
+            <p style="margin:0 0 6px;font-weight:bold;">${card.submissionType === 'update' ? 'Updated bone values' : 'Bone values'}</p>
+            <pre style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;">${esc(JSON.stringify({ gear: card.gear, kinks: card.kinks }, null, 2))}</pre>
+          </div>` : '';
+        const updateOtherHtml = includeUpdateOther && card.submissionType === 'update' ? `
+          <p style="margin:8px 0 0;"><strong>Online game settings:</strong> Collectable: ${card.isCollectable ? 'Yes' : 'No'}; Online playable: ${card.isOnlinePlayable ? 'Yes' : 'No'}; Tradeable: ${card.isAllowTrades ? 'Yes' : 'No'}.</p>` : '';
 
         // ── Email HTML ────────────────────────────────────────────────────────
         const html = `
 <div style="font-family:sans-serif;color:#e2e8f0;background:#0f172a;padding:32px;border-radius:12px;max-width:640px;">
 
-  <h1 style="color:#818cf8;margin:0 0 4px;">🦴 New Card Request</h1>
-  <p style="color:#94a3b8;margin:0 0 24px;font-size:14px;">A new Bone Battle card submission has arrived.</p>
+  <h1 style="color:#818cf8;margin:0 0 4px;">🦴 ${esc(submissionEmailSummary.requestLabel)}</h1>
+  <p style="color:#94a3b8;margin:0 0 24px;font-size:14px;">${card.submissionType === 'update' ? 'An update request for an existing Bone Battle card has arrived.' : 'A new Bone Battle card submission has arrived.'}</p>
 
   <div style="background:#1e293b;padding:20px;border-radius:8px;line-height:2;">
     <p style="margin:0"><strong style="color:#94a3b8;">Pup Name:</strong> ${esc(card.name)}</p>
-    <p style="margin:0"><strong style="color:#94a3b8;">Social:</strong> ${socialHtml}</p>
-    ${contactHtml ? `<p style="margin:0"><strong style="color:#94a3b8;">Contact via:</strong> ${contactHtml}</p>` : ''}
-    <p style="margin:0"><strong style="color:#94a3b8;">Total Bones:</strong> ${esc(card.totalBones ?? 'N/A')}</p>
+    <p style="margin:0"><strong style="color:#94a3b8;">Request Type:</strong> ${esc(submissionEmailSummary.requestLabel)}</p>
+    <p style="margin:0"><strong style="color:#94a3b8;">${socialLinkLabel}:</strong> ${socialHtml}</p>
+    ${includeUpdateLinks && contactHtml ? `<p style="margin:0"><strong style="color:#94a3b8;">Contact via:</strong> ${contactHtml}</p>` : ''}
+    ${includeUpdateBones ? `<p style="margin:0"><strong style="color:#94a3b8;">Total Bones:</strong> ${esc(card.totalBones ?? 'N/A')}</p>` : ''}
     ${card.newsletter ? '<p style="margin:0"><strong style="color:#34d399;">Newsletter:</strong> ✅ Subscribe me!</p>' : ''}
-    ${dogTricksHtml}
+    ${includeUpdateBones ? dogTricksHtml : ''}
   </div>
+
+  ${submissionEmailSummary.updateDetailsHtml}
+  ${updateProfileHtml}
+  ${updateLayoutHtml}
+  ${updateBoneValuesHtml}
+  ${updateOtherHtml}
 
   <div style="margin-top:20px;background:#1e293b;padding:16px 20px;border-radius:8px;">
     <p style="margin:0 0 8px;font-weight:bold;color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:.05em;">Attachments</p>
@@ -216,7 +283,7 @@ export async function POST(req: Request) {
       <!-- ${cardCSV ? '<li>CSV Data File (.csv)</li>' : ''} -->
       ${cardCapture && cardCapture.size > 0
             ? '<li>Card Preview Screenshot</li>'
-            : '<li style="color:#64748b;font-style:italic;">Card screenshot not available (mobile or capture failed)</li>'}
+            : card.submissionType === 'update' ? '' : '<li style="color:#64748b;font-style:italic;">Card screenshot not available (mobile or capture failed)</li>'}
     </ul>
   </div>
 
@@ -231,7 +298,7 @@ export async function POST(req: Request) {
         const { data, error } = await resend.emails.send({
             from: 'Bone Battle <cards@codehunterlab.com>',
             to: CARD_REQUEST_RECIPIENTS,
-            subject: `New Bone Battle Card: ${subjectName}${hasDogTricks ? ' 🐕' : ''}`,
+            subject: `${submissionEmailSummary.subjectLabel}: ${subjectName}${includeUpdateBones && hasDogTricks ? ' 🐕' : ''}`,
             html,
             attachments,
         });

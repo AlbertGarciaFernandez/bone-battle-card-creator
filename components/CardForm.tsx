@@ -20,6 +20,15 @@ const POSITION_OPTIONS: { label: string; value: CardPosition }[] = [
   { label: 'Right Bottom', value: 'right-bottom' },
 ];
 
+const UPDATE_SECTIONS = [
+  { id: 'image', label: 'Image' },
+  { id: 'links', label: 'Social and contact links' },
+  { id: 'profile', label: 'Profile details (name, color, height, birthday, shoe size, country)' },
+  { id: 'layout', label: 'Card element positions' },
+  { id: 'boneValues', label: 'Gear/kink bone values' },
+  { id: 'other', label: 'Other changes and online game settings' },
+] as const;
+
 const COUNTRIES = [
   { code: "AF", name: "Afghanistan" },
   { code: "AX", name: "Aland Islands" },
@@ -324,6 +333,8 @@ const CardForm: React.FC<CardFormProps> = ({
   const [customCountryName, setCustomCountryName] = useState('');
   const [showCropModal, setShowCropModal] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const isUpdate = card.submissionType === 'update';
+  const isUpdateSectionSelected = (section: string) => card.updateSections.includes(section);
 
   // Update effect to detect if country provided is in list or custom
   useEffect(() => {
@@ -494,6 +505,66 @@ const CardForm: React.FC<CardFormProps> = ({
   return (
     <div className="space-y-6">
 
+      <fieldset className="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
+        <legend className="px-2 text-sm font-bold text-bone-100">What are you submitting?</legend>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {([
+            { value: 'new', label: 'New card', description: 'Submit a request for a new card.' },
+            { value: 'update', label: 'Update existing card', description: 'Request changes to a card already created.' },
+          ] as const).map((option) => (
+            <label key={option.value} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${card.submissionType === option.value ? 'border-blue-500 bg-blue-950/30' : 'border-slate-700 bg-slate-900/40 hover:border-slate-500'}`}>
+              <input
+                type="radio"
+                name="submissionType"
+                value={option.value}
+                checked={card.submissionType === option.value}
+                onChange={() => setCard({ ...card, submissionType: option.value, updateSections: [], updateDetails: '', updateConsent: false })}
+                className="mt-1 accent-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-bold text-slate-100">{option.label}</span>
+                <span className="block mt-1 text-xs text-slate-400">{option.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {card.submissionType === 'update' && (
+          <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-950/30 px-3 py-2 text-xs leading-relaxed text-amber-200" role="note">
+            Updates are generally limited to once a year. See the BoneBattle FAQs for details and exceptions.
+          </p>
+        )}
+      </fieldset>
+
+      {isUpdate && (
+        <fieldset className="rounded-xl border border-amber-700/50 bg-amber-950/10 p-5 space-y-3">
+          <legend className="px-2 text-sm font-bold text-amber-200">What do you want to change?</legend>
+          <p className="text-xs text-slate-400">Select the areas to open only those fields. Leave Bone Values unchecked if they are not changing.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {UPDATE_SECTIONS.map((section) => {
+              const selected = isUpdateSectionSelected(section.id);
+              return (
+                <label key={section.id} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer text-sm transition-colors ${selected ? 'border-amber-500/60 bg-amber-900/20 text-amber-100' : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={(event) => setCard({
+                      ...card,
+                      updateSections: event.target.checked
+                        ? [...card.updateSections, section.id]
+                        : card.updateSections.filter((value) => value !== section.id),
+                      updateConsent: false,
+                    })}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"
+                  />
+                  <span>{section.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          {card.updateSections.length === 0 && <p className="text-xs text-amber-300">Select at least one area to update.</p>}
+        </fieldset>
+      )}
+
       <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 space-y-5">
 
         {/* Basic Info */}
@@ -505,7 +576,7 @@ const CardForm: React.FC<CardFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="pupName" className="block text-xs font-medium text-slate-400 mb-1">
-                Pup Name <span className="text-red-400">*</span>
+                {isUpdate ? 'Pup Name (to identify your card)' : 'Pup Name'} <span className="text-red-400">*</span>
               </label>
               <input
                 id="pupName"
@@ -525,7 +596,7 @@ const CardForm: React.FC<CardFormProps> = ({
                 Just the name — e.g. 'Joker', not 'Pup Joker' or 'Pup Joker NL'. No prefix or suffix.
               </p>
             </div>
-            <div>
+            {(!isUpdate || isUpdateSectionSelected('profile')) && <div>
               <label htmlFor="hoodColor" className="block text-xs font-medium text-slate-400 mb-1">
                 Hood Color <span className="text-red-400">*</span>
               </label>
@@ -542,9 +613,10 @@ const CardForm: React.FC<CardFormProps> = ({
               <p className="text-[11px] text-slate-500 mt-1 italic">
                 The color you identify as. Choose "Multi" if you don't fit one group (like red vs blue).
               </p>
-            </div>
+            </div>}
 
             {/* Image Adjustments - Moved here by user request */}
+            {(!isUpdate || isUpdateSectionSelected('image')) && (
             <div className="md:col-span-2 space-y-4">
               <div className={`mt-2 bg-slate-900/40 p-3 rounded-lg border ${!card.imageUrl ? 'opacity-30 pointer-events-none' : 'border-slate-700'} space-y-4`}>
                 <div className="flex items-center justify-between">
@@ -673,9 +745,11 @@ const CardForm: React.FC<CardFormProps> = ({
                 </p>
               </div>
             </div>
+            )}
           </div>
 
           {/* Layout Controls */}
+          {(!isUpdate || isUpdateSectionSelected('layout')) && <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
             <div>
               <label htmlFor="namePosition" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">Name Position</label>
@@ -704,7 +778,9 @@ const CardForm: React.FC<CardFormProps> = ({
               </select>
             </div>
           </div>
+          </>}
 
+          {(!isUpdate || isUpdateSectionSelected('profile')) && <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Height Inputs                 */}
             <div className={`bg-slate-900/50 p-4 rounded-lg border ${!card.height ? 'border-red-500/50' : 'border-slate-700'}`}>
@@ -901,11 +977,15 @@ const CardForm: React.FC<CardFormProps> = ({
               </div>
             </div>
           </div>
+          </>}
 
           <div>
             <label htmlFor="socialLink" className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
-              Social Link <span className="text-red-400">*</span>
+              Social Link{isUpdate && !isUpdateSectionSelected('links') ? ' (verification only)' : ''} <span className="text-red-400">*</span>
             </label>
+            {isUpdate && !isUpdateSectionSelected('links') && (
+              <p className="text-[10px] text-slate-500 mb-2">Enter the social link on your existing card so the team can verify your request. It will only be changed if you select Social and contact links.</p>
+            )}
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
@@ -947,6 +1027,7 @@ const CardForm: React.FC<CardFormProps> = ({
           </div>
 
           {/* Contact Preference */}
+          {(!isUpdate || isUpdateSectionSelected('links')) && (
           <div>
             <label className="block text-[10px] font-medium text-slate-400 mb-1 uppercase">
               How to contact you
@@ -1010,10 +1091,12 @@ const CardForm: React.FC<CardFormProps> = ({
               )}
             </div>
           </div>
+          )}
 
         </div>
 
         {/* BONE MATRIX */}
+        {(!isUpdate || isUpdateSectionSelected('boneValues')) && (
         <div className={`p-4 rounded-lg border ${isOverLimit ? 'bg-red-950/30 border-red-500/50' : 'bg-slate-900/50 border-slate-700'}`}>
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-sm font-bold text-slate-300">Bone Values</h4>
@@ -1243,6 +1326,7 @@ const CardForm: React.FC<CardFormProps> = ({
           )}
 
         </div>
+        )}
 
         {/* ── Consent & Terms of Use ─────────────────────────────────────── */}
         <div className="space-y-3">
@@ -1304,8 +1388,37 @@ const CardForm: React.FC<CardFormProps> = ({
             </label>
           </div>
 
+          {card.submissionType === 'update' && (
+            <fieldset className={`rounded-lg border p-4 space-y-3 ${card.updateConsent && card.updateSections.length > 0 ? 'border-green-700/50 bg-green-950/10' : 'border-amber-700/50 bg-amber-950/10'}`}>
+              <legend className="px-2 text-sm font-bold text-amber-200">Confirm your update request</legend>
+              <p className="text-xs text-slate-400">Only the selected fields will be included in this update request.</p>
+              {isUpdateSectionSelected('other') && <div>
+                <label htmlFor="update-details" className="block text-xs font-medium text-slate-300 mb-1">Additional details <span className="text-slate-500">(optional)</span></label>
+                <textarea
+                  id="update-details"
+                  value={card.updateDetails}
+                  onChange={(event) => setCard({ ...card, updateDetails: event.target.value, updateConsent: false })}
+                  maxLength={1000}
+                  rows={3}
+                  className="w-full resize-y rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-amber-400 focus:outline-none"
+                  placeholder="Describe the requested changes for the team."
+                />
+              </div>}
+              <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-amber-800/40 bg-slate-900/50 p-3 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={card.updateConsent}
+                  onChange={(event) => handleChange('updateConsent', event.target.checked)}
+                  required={card.submissionType === 'update'}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"
+                />
+                <span>I confirm that the selected fields and any additional details above accurately describe the changes I am requesting.</span>
+              </label>
+            </fieldset>
+          )}
+
           {/* Optional opt-ins — Section 3 */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 space-y-2">
+          {(card.submissionType !== 'update' || isUpdateSectionSelected('other')) && <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 space-y-2">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Section 3 – Online Game Opt-Ins <span className="text-slate-500 normal-case font-normal">(optional)</span></p>
 
             <label className="flex items-start gap-3 cursor-pointer group">
@@ -1343,7 +1456,7 @@ const CardForm: React.FC<CardFormProps> = ({
                 <span className="font-medium text-slate-200">Tradeable</span> — My card may be used for digital trade requests between users.
               </span>
             </label>
-          </div>
+          </div>}
 
           {/* Creator decision consent */}
           <div className={`flex items-start gap-3 p-3 rounded-lg border ${!card.decisionConsent ? 'bg-red-900/20 border-red-500/50' : 'bg-slate-800/40 border-slate-600/50'}`}>
@@ -1356,7 +1469,7 @@ const CardForm: React.FC<CardFormProps> = ({
               className="mt-0.5 cursor-pointer w-5 h-5 accent-indigo-500 shrink-0"
             />
             <label htmlFor="consent-preview" className="text-sm text-slate-300 cursor-pointer">
-              <span className="text-red-400">*</span> I accept that this is a preview of the card and the creator (<span className="font-medium text-slate-200">bonebattlecards</span>) has the final decision on the positioning of elements.
+              <span className="text-red-400">*</span> I understand this is a card preview and an approved BoneBattleCards creator creates the final official card and makes the final decision on element positioning.
             </label>
           </div>
 

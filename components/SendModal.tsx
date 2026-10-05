@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
     X, Instagram, Loader2, CheckCircle, AlertCircle, Send, MessageCircle, ShieldAlert
 } from 'lucide-react';
@@ -10,6 +11,7 @@ interface SendModalProps {
     onClose: () => void;
     contactPlatform?: 'instagram' | 'telegram';
     telegramHandle?: string;
+    submissionType: 'new' | 'update';
     submitStatus: 'idle' | 'sending' | 'success' | 'error';
     sendError: string | null;
     isSending: boolean;
@@ -20,7 +22,7 @@ interface SendModalProps {
 }
 
 export default function SendModal({
-    isOpen, onClose, contactPlatform = 'instagram', telegramHandle,
+    isOpen, onClose, contactPlatform = 'instagram', telegramHandle, submissionType,
     submitStatus, sendError, isSending, isSendDisabled, onSubmit, onClearError, onContinue
 }: SendModalProps) {
     const isTelegram = contactPlatform === 'telegram';
@@ -91,7 +93,7 @@ export default function SendModal({
                             </div>
                             <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
                                 <MessageCircle size={14} />
-                                <span>Any suggestions? Contact <a href="https://instagram.com/pup.hunter071" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white underline">Hunter</a>.</span>
+                                <span>Online form help: <Link href="https://www.bonebattle.me/faqs" className="text-slate-300 hover:text-white underline">visit the FAQs</Link>. Card creators do not handle technical issues with the form.</span>
                             </div>
                         </div>
                     )}
@@ -109,7 +111,9 @@ export default function SendModal({
                             <div className="flex flex-col items-center justify-center p-6 bg-green-900/10 rounded-xl border border-green-500/30">
                                 <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
                                 <p className="text-green-200 font-bold text-center uppercase tracking-wider text-xl">Form Submitted!</p>
-                                <p className="text-green-400/80 text-sm mt-1 text-center">Your card data has been sent securely.</p>
+                                <p className="text-green-400/80 text-sm mt-1 text-center">
+                                    {submissionType === 'update' ? 'Your card update request has been sent securely.' : 'Your new card request has been sent securely.'}
+                                </p>
                             </div>
 
                             {/* ── VERIFICATION WARNING — high visibility ── */}
@@ -171,6 +175,12 @@ export default function SendModal({
                                         </a>
                                     </>
                                 )}
+                            </div>
+                            <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 text-center">
+                                <p className="text-sm text-slate-300">BoneBattleCards is made because our team loves doing it. Card creation and shipping for our own cards are free, and supporting the creators is optional.</p>
+                                <Link href="https://www.bonebattle.me/team-bonebattle/how-to-support" className="inline-block mt-3 text-sm font-bold text-orange-300 hover:text-orange-200 underline underline-offset-4">
+                                    Support BoneBattle
+                                </Link>
                             </div>
                         </div>
                     )}
